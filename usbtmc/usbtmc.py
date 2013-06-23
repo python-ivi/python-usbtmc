@@ -330,11 +330,11 @@ class Instrument(object):
     
     def trigger(self):
         "Send trigger command"
-        raise NotImplementedError()
+        self.write("*TRG")
     
     def clear(self):
         "Send clear command"
-        raise NotImplementedError()
+        self.write("*CLS")
     
     def remote(self):
         "Send remote command"
