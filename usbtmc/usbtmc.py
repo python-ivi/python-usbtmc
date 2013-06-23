@@ -199,6 +199,10 @@ class Instrument(object):
         if self.bulk_in_ep is None or self.bulk_out_ep is None:
             raise UsbtmcError("Invalid endpoint configuration")
         
+        self.reset()
+    
+    def reset(self):
+        self.device.reset()
     
     def is_usb488(self):
         return self.iface.bInterfaceProtocol == USB488_bInterfaceProtocol
