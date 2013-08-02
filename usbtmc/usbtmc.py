@@ -27,6 +27,7 @@ THE SOFTWARE.
 import usb.core
 import usb.util
 import struct
+import time
 
 # constants
 USBTMC_bInterfaceClass    = 0xFE
@@ -65,7 +66,7 @@ USB488_GOTO_LOCAL       = 161
 USB488_LOCAL_LOCKOUT    = 162
 
 # Exceptions
-class UsbtmcError(Exception): pass
+class UsbtmcException(Exception): pass
 
 def list_devices():
     "List all connected USBTMC devices"
@@ -154,11 +155,11 @@ class Instrument(object):
         # find device
         if self.device is None:
             if self.idVendor is None or self.idProduct is None:
-                raise UsbtmcError("No device specified")
+                raise UsbtmcException("No device specified")
             else:
                 self.device = find_device(self.idVendor, self.idProduct, self.iSerial)
                 if self.device is None:
-                    raise UsbtmcError("Device not found")
+                    raise UsbtmcException("Device not found")
         
         # initialize device
         if self.device.is_kernel_driver_active(0):
@@ -179,7 +180,7 @@ class Instrument(object):
             break
         
         if self.iface is None:
-            raise UsbtmcError("Not a USBTMC device")
+            raise UsbtmcException("Not a USBTMC device")
         
         # find endpoints
         for ep in self.iface:
@@ -197,15 +198,31 @@ class Instrument(object):
                     self.interrupt_in_ep = ep
         
         if self.bulk_in_ep is None or self.bulk_out_ep is None:
-            raise UsbtmcError("Invalid endpoint configuration")
+            raise UsbtmcException("Invalid endpoint configuration")
         
         self.reset()
+        
+        time.sleep(0.01) # prevents a very repeatable pipe error
+        
+        self.get_capabilities()
     
     def reset(self):
         self.device.reset()
     
     def is_usb488(self):
         return self.iface.bInterfaceProtocol == USB488_bInterfaceProtocol
+    
+    def get_capabilities(self):
+        b=self.device.ctrl_transfer(
+            usb.util.build_request_type(usb.util.CTRL_IN, usb.util.CTRL_TYPE_CLASS, usb.util.CTRL_RECIPIENT_INTERFACE),
+            USBTMC_REQUEST_GET_CAPABILITIES,
+            0x0000,
+            self.iface.index,
+            0x0018,
+            timeout=self.timeout)
+        if (b[0] == USBTMC_STATUS_SUCCESS):
+            # process capabilities
+            pass
     
     # message header management
     def pack_bulk_out_header(self, msgid):
