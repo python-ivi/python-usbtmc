@@ -252,12 +252,12 @@ class Instrument(object):
         return hdr+struct.pack("<Lxxxx", transfer_size)
     
     def unpack_bulk_in_header(self, data):
-        msgid, btag, btaginverse = struct.unpack('BBBx', data[0:4])
+        msgid, btag, btaginverse = struct.unpack_from('BBBx', data)
         return (msgid, btag, btaginverse)
     
     def unpack_dev_dep_resp_header(self, data):
-        msgid, btag, btaginverse = self.unpack_bulk_in_header(data[0:4])
-        transfer_size, transfer_attributes = struct.unpack('<LBxxx', data[4:12])
+        msgid, btag, btaginverse = self.unpack_bulk_in_header(data)
+        transfer_size, transfer_attributes = struct.unpack_from('<LBxxx', data, 4)
         data = data[12:]
         return (msgid, btag, btaginverse, transfer_size, transfer_attributes, data)
     
@@ -306,7 +306,7 @@ class Instrument(object):
             
             resp = self.bulk_in_ep.read(read_len+12, timeout = self.timeout)
             
-            msgid, btag, btaginverse, transfer_size, transfer_attributes, data = self.unpack_dev_dep_resp_header(bytearray(resp))
+            msgid, btag, btaginverse, transfer_size, transfer_attributes, data = self.unpack_dev_dep_resp_header(resp.tostring())
             
             eom = transfer_attributes & 1
             
