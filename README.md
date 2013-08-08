@@ -11,6 +11,11 @@ https://github.com/alexforencich/python-usbtmc
 Python USBTMC provides a pure Python USBTMC driver for controlling instruments
 over USB.
 
+## Requirements
+
+* Python 2 or Python 3
+* PyUSB
+
 ## Installation
 
 Extract and run
