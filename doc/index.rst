@@ -1,23 +1,28 @@
-.. Python USBTMC documentation master file, created by
-   sphinx-quickstart on Fri Aug  2 15:09:00 2013.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
+.. Python USBTMC documentation master file
 
-Welcome to Python USBTMC's documentation!
-=========================================
+Welcome to Python USBTMC's documentation
+========================================
+
+This Python package supports the USBTMC instrument control protocol for
+controlling instruments over USB.
+
+See also:
+
+- `Python USBTMC home page`_
+- `GitHub repository`_
+
+.. _`Python USBTMC home page`: http://alexforencich.com/wiki/en/python-usbtmc/start
+.. _`GitHub repository`: https://github.com/alexforencich/python-usbtmc
 
 Contents:
 
 .. toctree::
    :maxdepth: 2
 
-.. automodule:: usbtmc
-   :members:
-
-.. autoclass:: usbtmc.Instrument
-   :members:
-
-
+   intro
+   examples
+   usbtmc
+   appendix
 
 Indices and tables
 ==================
