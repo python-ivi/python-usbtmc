@@ -28,6 +28,7 @@ import usb.core
 import usb.util
 import struct
 import time
+import os
 
 # constants
 USBTMC_bInterfaceClass    = 0xFE
@@ -162,8 +163,9 @@ class Instrument(object):
                     raise UsbtmcException("Device not found")
         
         # initialize device
-        if self.device.is_kernel_driver_active(0):
-            self.device.detach_kernel_driver(0)
+        if os.name == 'posix':
+            if self.device.is_kernel_driver_active(0):
+                self.device.detach_kernel_driver(0)
         
         self.device.set_configuration()
         self.device.set_interface_altsetting()
