@@ -209,7 +209,8 @@ class Instrument(object):
         self.get_capabilities()
     
     def reset(self):
-        self.device.reset()
+        if os.name == 'posix':
+            self.device.reset()
     
     def is_usb488(self):
         return self.iface.bInterfaceProtocol == USB488_bInterfaceProtocol
