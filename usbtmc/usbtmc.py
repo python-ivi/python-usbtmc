@@ -261,7 +261,7 @@ class Instrument(object):
     def unpack_dev_dep_resp_header(self, data):
         msgid, btag, btaginverse = self.unpack_bulk_in_header(data)
         transfer_size, transfer_attributes = struct.unpack_from('<LBxxx', data, 4)
-        data = data[12:]
+        data = data[12:transfer_size+12]
         return (msgid, btag, btaginverse, transfer_size, transfer_attributes, data)
     
     def write_raw(self, data):
