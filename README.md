@@ -49,12 +49,46 @@ will actually disappear from /dev when Python USBTMC connects.
     KERNEL=="usbtmc/*",       MODE="0660", GROUP="usbtmc"
     KERNEL=="usbtmc[0-9]*",   MODE="0660", GROUP="usbtmc"
 
+## Windows setup
+
+To use Python USBTMC in Windows, PyUSB and libusb are required.  They can be
+downloaded from:
+
+* http://sourceforge.net/projects/pyusb/
+* http://www.libusb.org/wiki/libusb-win32
+
+An INF file will also need to be created in order to use devices with libusb.
+Without a properly set up INF file, Python USBTMC will not be able to locate
+the device.  There are instructions on the libusb page for how to generate the
+INF file.  
+
 ## Usage examples
 
 Connecting to Agilent MSO7104A via USBTMC:
 
     import usbtmc
     instr =  usbtmc.Instrument(2391, 5973)
+    print(instr.ask("*IDN?"))
+    # returns 'AGILENT TECHNOLOGIES,MSO7104A,MY********,06.16.0001'
+
+When multiple instruments are connected they can be identified by serial number:
+
+    import usbtmc
+    instr =  usbtmc.Instrument(2391, 5973, 'MY********')
+    print(instr.ask("*IDN?"))
+    # returns 'AGILENT TECHNOLOGIES,MSO7104A,MY********,06.16.0001'
+
+It is also possible to connect with VISA resource strings like so:
+
+    import usbtmc
+    instr =  usbtmc.Instrument("USB::0x0957::0x1755::INSTR")
+    print(instr.ask("*IDN?"))
+    # returns 'AGILENT TECHNOLOGIES,MSO7104A,MY********,06.16.0001'
+
+and:
+
+    import usbtmc
+    instr =  usbtmc.Instrument("USB::0x0957::0x1755::MY********::INSTR")
     print(instr.ask("*IDN?"))
     # returns 'AGILENT TECHNOLOGIES,MSO7104A,MY********,06.16.0001'
 
