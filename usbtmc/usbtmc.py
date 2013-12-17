@@ -111,7 +111,7 @@ def find_device(idVendor = None, idProduct = None, iSerial = None):
 class Instrument(object):
     "USBTMC instrument interface client"
     def __init__(self, *args, **kwargs):
-        ""
+        "Create new USBTMC instrument object"
         self.idVendor = 0
         self.idProduct = 0
         self.iSerial = None
@@ -119,9 +119,14 @@ class Instrument(object):
         self.iface = None
         self.term_char = None
         
+        resource = None
+        
         # process arguments
         if len(args) == 1:
-            self.device = args[0]
+            if type(args[0]) == str:
+                resource = args[0]
+            else:
+                self.device = args[0]
         if len(args) >= 2:
             self.idVendor = args[0]
             self.idProduct = args[1]
@@ -142,6 +147,22 @@ class Instrument(object):
                 self.device = val
             elif op == 'term_char':
                 self.term_char = val
+            elif op == 'resource':
+                resource = val
+        
+        if resource is not None:
+            if resource[:3] == 'USB' and '::' in resource:
+                # argument is a VISA resource string
+                res = args[0].split('::')
+                if len(res) < 4:
+                    raise UsbtmcException("Invalid resource string")
+                self.idVendor = int(res[1], 0)
+                self.idProduct = int(res[2], 0)
+                self.iSerial = None
+                if len(res) > 4:
+                    self.iSerial = res[3]
+            else:
+                raise UsbtmcException("Invalid resource string")
         
         self.max_recv_size = 1024*1024
         
