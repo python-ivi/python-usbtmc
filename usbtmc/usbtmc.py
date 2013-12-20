@@ -264,7 +264,7 @@ class Instrument(object):
             term_char = 0
         else:
             transfer_attributes = 2
-            term_char = str(self.term_char).encode('utf-8')[0]
+            term_char = self.term_char
         return hdr+struct.pack("<LBBxx", transfer_size, transfer_attributes, term_char)
     
     def pack_vendor_specific_out_header(self, transfer_size):
