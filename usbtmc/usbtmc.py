@@ -320,7 +320,7 @@ class Instrument(object):
         term_char = None
         
         if self.term_char is not None:
-            term_char = str(self.term_char).encode('utf-8')[0]
+            term_char = self.term_char
         
         read_data = b''
         
