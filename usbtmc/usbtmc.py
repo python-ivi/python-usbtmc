@@ -76,7 +76,8 @@ def list_devices():
         for cfg in dev:
             d = usb.util.find_descriptor(cfg, bInterfaceClass = USBTMC_bInterfaceClass,
                                         bInterfaceSubClass = USBTMC_bInterfaceSubClass)
-            return d is not None
+            is_advantest = dev.idVendor == 0x1334
+            return d is not None or is_advantest
     
     return usb.core.find(find_all = True, custom_match = is_usbtmc_device)
 
@@ -118,6 +119,8 @@ class Instrument(object):
         self.device = None
         self.iface = None
         self.term_char = None
+        self.advantest_quirk = False
+        self.advantest_locked = False
         
         resource = None
         
@@ -194,8 +197,9 @@ class Instrument(object):
         # find USBTMC interface
         for cfg in self.device:
             for iface in cfg:
-                if (iface.bInterfaceClass == USBTMC_bInterfaceClass and
-                   iface.bInterfaceSubClass == USBTMC_bInterfaceSubClass):
+                if (self.device.idVendor == 0x1334) or \
+                   (iface.bInterfaceClass == USBTMC_bInterfaceClass and
+                    iface.bInterfaceSubClass == USBTMC_bInterfaceSubClass):
                     self.iface = iface
                     break
             else:
@@ -205,6 +209,13 @@ class Instrument(object):
         if self.iface is None:
             raise UsbtmcException("Not a USBTMC device")
         
+        # set quirk flags if necessary
+        if self.device.idVendor == 0x1334:
+            # Advantest/ADCMT devices have a very odd USBTMC implementation
+            # which requires max 63 byte reads and never signals EOI on read
+            self.max_recv_size = 63
+            self.advantest_quirk = True
+
         # find endpoints
         for ep in self.iface:
             ep_at = ep.bmAttributes
@@ -335,6 +346,10 @@ class Instrument(object):
             eom = transfer_attributes & 1
             
             read_data += data
+
+            # Advantest devices never signal EOI and may only send one read packet
+            if self.advantest_quirk:
+                break
             
             if num > 0:
                 num = num - len(data)
@@ -347,8 +362,16 @@ class Instrument(object):
     
     def ask_raw(self, data, num=-1):
         "Write then read binary data"
-        self.write_raw(data)
-        return self.read_raw(num)
+        # Advantest/ADCMT hardware won't respond to a command unless it's in Local Lockout mode
+        was_locked = self.advantest_locked
+        try:
+            if self.advantest_quirk and not was_locked:
+                self.lock()
+            self.write_raw(data)
+            return self.read_raw(num)
+        finally:
+            if self.advantest_quirk and not was_locked:
+                self.unlock()
     
     def write(self, message, encoding = 'utf-8'):
         "Write string to instrument"
@@ -366,8 +389,16 @@ class Instrument(object):
 
     def ask(self, message, num=-1, encoding = 'utf-8'):
         "Write then read string"
-        self.write(message, encoding)
-        return self.read(num, encoding)
+        # Advantest/ADCMT hardware won't respond to a command unless it's in Local Lockout mode
+        was_locked = self.advantest_locked
+        try:
+            if self.advantest_quirk and not was_locked:
+                self.lock()
+            self.write(message, encoding)
+            return self.read(message, encoding)
+        finally:
+            if self.advantest_quirk and not was_locked:
+                self.unlock()
     
     def read_stb(self):
         "Read status byte"
@@ -391,11 +422,32 @@ class Instrument(object):
     
     def lock(self):
         "Send lock command"
-        raise NotImplementedError()
+        if self.advantest_quirk:
+            # This Advantest/ADCMT vendor-specific control command enables remote control and must be sent before any commands are exchanged
+            # (otherwise READ commands will only retrieve the latest measurement)
+            self.advantest_locked = True
+            self.device.ctrl_transfer(bmRequestType=0xA1, bRequest=0xA0, wValue=0x0001, wIndex=0x0000, data_or_wLength=1)
+        else:
+            raise NotImplementedError()
     
     def unlock(self):
         "Send unlock command"
-        raise NotImplementedError()
+        if self.advantest_quirk:
+            # This Advantest/ADCMT vendor-specific control command enables remote control and must be sent before any commands are exchanged
+            # (otherwise READ commands will only retrieve the latest measurement)
+            self.advantest_locked = False
+            self.device.ctrl_transfer(bmRequestType=0xA1, bRequest=0xA0, wValue=0x0000, wIndex=0x0000, data_or_wLength=1)
+        else:
+            raise NotImplementedError()
 
-
+    def advantest_read_myid(self):
+        "Read MyID value from Advantest and ADCMT devices"
+        if self.advantest_quirk:
+            # This Advantest/ADCMT vendor-specific control command reads the "MyID" identifier
+            try:
+                return int(self.device.ctrl_transfer(bmRequestType=0xC1, bRequest=0xF5, wValue=0x0000, wIndex=0x0000, data_or_wLength=1)[0])
+            except:
+                return None
+        else:
+            raise NotImplementedError()
 
