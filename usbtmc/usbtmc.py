@@ -395,7 +395,7 @@ class Instrument(object):
             if self.advantest_quirk and not was_locked:
                 self.lock()
             self.write(message, encoding)
-            return self.read(message, encoding)
+            return self.read(encoding=encoding)
         finally:
             if self.advantest_quirk and not was_locked:
                 self.unlock()
