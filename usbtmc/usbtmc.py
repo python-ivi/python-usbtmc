@@ -258,6 +258,21 @@ class Instrument(object):
         if (b[0] == USBTMC_STATUS_SUCCESS):
             # process capabilities
             pass
+
+    def pulse(self):
+        """
+        Send a pulse indicator request, this should blink a light
+        for 500-1000ms and then turn off again. (Only if supported)
+        """
+        b = self.device.ctrl_transfer(
+            usb.util.build_request_type(usb.util.CTRL_IN, usb.util.CTRL_TYPE_CLASS, usb.util.CTRL_RECIPIENT_INTERFACE),
+            USBTMC_REQUEST_INDICATOR_PULSE,
+            0x0000,
+            self.iface.index,
+            0x0001,
+            timeout=self.timeout)
+        if (b[0] == USBTMC_STATUS_SUCCESS):
+            pass
     
     # message header management
     def pack_bulk_out_header(self, msgid):
