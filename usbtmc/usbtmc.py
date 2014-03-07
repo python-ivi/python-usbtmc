@@ -29,6 +29,7 @@ import usb.util
 import struct
 import time
 import os
+import re
 
 # constants
 USBTMC_bInterfaceClass    = 0xFE
@@ -154,18 +155,28 @@ class Instrument(object):
                 resource = val
         
         if resource is not None:
-            if resource[:3] == 'USB' and '::' in resource:
-                # argument is a VISA resource string
-                res = args[0].split('::')
-                if len(res) < 4:
-                    raise UsbtmcException("Invalid resource string")
-                self.idVendor = int(res[1], 0)
-                self.idProduct = int(res[2], 0)
-                self.iSerial = None
-                if len(res) > 4:
-                    self.iSerial = res[3]
-            else:
+            # argument is a VISA resource string
+            # valid resource strings:
+            # USB::1234::5678::INSTR
+            # USB::1234::5678::SERIAL::INSTR
+            # USB0::0x1234::0x5678::INSTR
+            # USB0::0x1234::0x5678::SERIAL::INSTR
+            m = re.match('^(?P<prefix>(?P<type>USB)\d*)(::(?P<arg1>[^\s:]+))?(::(?P<arg2>[^\s:]+(\[.+\])?))?(::(?P<arg3>[^\s:]+))?(::(?P<suffix>INSTR))$', resource, re.I)
+            if m is None:
+                raise IOException('Invalid resource string')
+
+            res_type = m.group('type').upper()
+            res_prefix = m.group('prefix')
+            res_arg1 = m.group('arg1')
+            res_arg2 = m.group('arg2')
+            res_arg3 = m.group('arg3')
+            res_suffix = m.group('suffix')
+
+            if res_arg1 is None and res_arg2 is None:
                 raise UsbtmcException("Invalid resource string")
+            self.idVendor = int(res_arg1, 0)
+            self.idProduct = int(res_arg2, 0)
+            self.iSerial = res_arg3
         
         self.max_recv_size = 1024*1024
         
