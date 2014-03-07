@@ -100,7 +100,7 @@ def find_device(idVendor = None, idProduct = None, iSerial = None):
             
             # try reading serial number
             try:
-                s = usb.util.get_string(dev, 256, 3)
+                s = usb.util.get_string(dev, dev.iSerialNumber)
             except:
                 pass
             
