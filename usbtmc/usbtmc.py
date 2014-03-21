@@ -401,7 +401,7 @@ class Instrument(object):
     
     def write(self, message, encoding = 'utf-8'):
         "Write string to instrument"
-        if message.__class__ is tuple or message.__class__ is list:
+        if type(message) is tuple or type(message) is list:
             # recursive call for a list of commands
             for message_i in message:
                 self.write(message_i, encoding)
@@ -415,6 +415,13 @@ class Instrument(object):
 
     def ask(self, message, num=-1, encoding = 'utf-8'):
         "Write then read string"
+        if type(message) is tuple or type(message) is list:
+            # recursive call for a list of commands
+            val = list()
+            for message_i in message:
+                val.append(self.ask(message_i, num, encoding))
+            return val
+        
         # Advantest/ADCMT hardware won't respond to a command unless it's in Local Lockout mode
         was_locked = self.advantest_locked
         try:
