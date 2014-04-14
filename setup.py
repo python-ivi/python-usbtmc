@@ -16,7 +16,7 @@ control protocol for controlling instruments over USB.''',
     author = 'Alex Forencich',
     author_email = 'alex@alexforencich.com',
     url = 'http://alexforencich.com/wiki/en/python-usbtmc/start',
-    download_url = 'http://github.com/alexforencich/python-usbtmc/tarball/master',
+    download_url = 'http://github.com/python-ivi/python-usbtmc/tarball/master',
     keywords = 'USB USBTMC measurement instrument',
     license = 'MIT License',
     classifiers=[

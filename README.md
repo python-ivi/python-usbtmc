@@ -4,7 +4,10 @@ For more information and updates:
 http://alexforencich.com/wiki/en/python-usbtmc/start
 
 GitHub repository:
-https://github.com/alexforencich/python-usbtmc
+https://github.com/python-ivi/python-usbtmc
+
+Google group:
+https://groups.google.com/d/forum/python-ivi
 
 ## Introduction
 

@@ -12,7 +12,7 @@ See also:
 - `GitHub repository`_
 
 .. _`Python USBTMC home page`: http://alexforencich.com/wiki/en/python-usbtmc/start
-.. _`GitHub repository`: https://github.com/alexforencich/python-usbtmc
+.. _`GitHub repository`: https://github.com/python-ivi/python-usbtmc
 
 Contents:
 
