@@ -1,4 +1,5 @@
 
+from __future__ import with_statement
 
 # http://docs.python.org/distutils/
 # http://packages.python.org/distribute/
@@ -7,10 +8,18 @@ try:
 except:
     from distutils.core import setup
 
+import os.path
+
+version_py = os.path.join(os.path.dirname(__file__), 'usbtmc', 'version.py')
+with open(version_py, 'r') as f:
+    d = dict()
+    exec(f.read(), d)
+    version = d['__version__']
+
 setup(
     name = 'python-usbtmc',
     description = 'Python USBTMC driver for controlling instruments over USB',
-    version = '0.1',
+    version = version,
     long_description = '''This Python package supports the USBTMC instrument
 control protocol for controlling instruments over USB.''',
     author = 'Alex Forencich',
