@@ -80,7 +80,7 @@ def list_devices():
             is_advantest = dev.idVendor == 0x1334
             return d is not None or is_advantest
     
-    return usb.core.find(find_all = True, custom_match = is_usbtmc_device)
+    return list(usb.core.find(find_all = True, custom_match = is_usbtmc_device))
 
 def find_device(idVendor = None, idProduct = None, iSerial = None):
     "Find USBTMC instrument"
