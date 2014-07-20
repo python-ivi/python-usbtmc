@@ -68,7 +68,29 @@ USB488_GOTO_LOCAL       = 161
 USB488_LOCAL_LOCKOUT    = 162
 
 # Exceptions
-class UsbtmcException(Exception): pass
+class UsbtmcException(Exception):
+    em = {0:  "No error"}
+    
+    def __init__(self, err = None, note = None):
+        self.err = err
+        self.note = note
+        self.msg = ''
+        
+        if err is None:
+            self.msg = note
+        else:
+            if type(err) is int:
+                if err in self.em:
+                    self.msg = "%d: %s" % (err, self.em[err])
+                else:
+                    self.msg = "%d: Unknown error" % err
+            else:
+                self.msg = err
+            if note is not None:
+                self.msg = "%s [%s]" % (self.msg, note)
+    
+    def __str__(self):
+        return self.msg
 
 def list_devices():
     "List all connected USBTMC devices"
@@ -163,7 +185,7 @@ class Instrument(object):
             # USB0::0x1234::0x5678::SERIAL::INSTR
             m = re.match('^(?P<prefix>(?P<type>USB)\d*)(::(?P<arg1>[^\s:]+))?(::(?P<arg2>[^\s:]+(\[.+\])?))?(::(?P<arg3>[^\s:]+))?(::(?P<suffix>INSTR))$', resource, re.I)
             if m is None:
-                raise IOException('Invalid resource string')
+                raise UsbtmcException("Invalid resource string", 'init')
 
             res_type = m.group('type').upper()
             res_prefix = m.group('prefix')
@@ -173,7 +195,7 @@ class Instrument(object):
             res_suffix = m.group('suffix')
 
             if res_arg1 is None and res_arg2 is None:
-                raise UsbtmcException("Invalid resource string")
+                raise UsbtmcException("Invalid resource string", 'init')
             self.idVendor = int(res_arg1, 0)
             self.idProduct = int(res_arg2, 0)
             self.iSerial = res_arg3
@@ -191,11 +213,11 @@ class Instrument(object):
         # find device
         if self.device is None:
             if self.idVendor is None or self.idProduct is None:
-                raise UsbtmcException("No device specified")
+                raise UsbtmcException("No device specified", 'init')
             else:
                 self.device = find_device(self.idVendor, self.idProduct, self.iSerial)
                 if self.device is None:
-                    raise UsbtmcException("Device not found")
+                    raise UsbtmcException("Device not found", 'init')
         
         # initialize device
         if os.name == 'posix':
@@ -218,7 +240,7 @@ class Instrument(object):
             break
         
         if self.iface is None:
-            raise UsbtmcException("Not a USBTMC device")
+            raise UsbtmcException("Not a USBTMC device", 'init')
         
         # set quirk flags if necessary
         if self.device.idVendor == 0x1334:
@@ -243,7 +265,7 @@ class Instrument(object):
                     self.interrupt_in_ep = ep
         
         if self.bulk_in_ep is None or self.bulk_out_ep is None:
-            raise UsbtmcException("Invalid endpoint configuration")
+            raise UsbtmcException("Invalid endpoint configuration", 'init')
         
         self.reset()
         
