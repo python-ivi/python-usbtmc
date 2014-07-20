@@ -67,6 +67,26 @@ USB488_REN_CONTROL      = 160
 USB488_GOTO_LOCAL       = 161
 USB488_LOCAL_LOCKOUT    = 162
 
+def parse_visa_resource_string(resource_string):
+    # valid resource strings:
+    # USB::1234::5678::INSTR
+    # USB::1234::5678::SERIAL::INSTR
+    # USB0::0x1234::0x5678::INSTR
+    # USB0::0x1234::0x5678::SERIAL::INSTR
+    m = re.match('^(?P<prefix>(?P<type>USB)\d*)(::(?P<arg1>[^\s:]+))'
+        '(::(?P<arg2>[^\s:]+(\[.+\])?))(::(?P<arg3>[^\s:]+))?'
+        '(::(?P<suffix>INSTR))$', resource_string, re.I)
+
+    if m is not None:
+        return dict(
+            type = m.group('type').upper(),
+            prefix = m.group('prefix'),
+            arg1 = m.group('arg1'),
+            arg2 = m.group('arg2'),
+            arg3 = m.group('arg3'),
+            suffix = m.group('suffix')
+        )
+
 # Exceptions
 class UsbtmcException(Exception):
     em = {0:  "No error"}
@@ -177,28 +197,17 @@ class Instrument(object):
                 resource = val
         
         if resource is not None:
-            # argument is a VISA resource string
-            # valid resource strings:
-            # USB::1234::5678::INSTR
-            # USB::1234::5678::SERIAL::INSTR
-            # USB0::0x1234::0x5678::INSTR
-            # USB0::0x1234::0x5678::SERIAL::INSTR
-            m = re.match('^(?P<prefix>(?P<type>USB)\d*)(::(?P<arg1>[^\s:]+))?(::(?P<arg2>[^\s:]+(\[.+\])?))?(::(?P<arg3>[^\s:]+))?(::(?P<suffix>INSTR))$', resource, re.I)
-            if m is None:
+            res = parse_visa_resource_string(resource)
+
+            if res is None:
                 raise UsbtmcException("Invalid resource string", 'init')
 
-            res_type = m.group('type').upper()
-            res_prefix = m.group('prefix')
-            res_arg1 = m.group('arg1')
-            res_arg2 = m.group('arg2')
-            res_arg3 = m.group('arg3')
-            res_suffix = m.group('suffix')
-
-            if res_arg1 is None and res_arg2 is None:
+            if res['arg1'] is None and res['arg2'] is None:
                 raise UsbtmcException("Invalid resource string", 'init')
-            self.idVendor = int(res_arg1, 0)
-            self.idProduct = int(res_arg2, 0)
-            self.iSerial = res_arg3
+
+            self.idVendor = int(res['arg1'], 0)
+            self.idProduct = int(res['arg2'], 0)
+            self.iSerial = res['arg3']
         
         self.max_recv_size = 1024*1024
         
