@@ -160,6 +160,7 @@ class Instrument(object):
         self.idProduct = 0
         self.iSerial = None
         self.device = None
+        self.cfg = None
         self.iface = None
         self.term_char = None
         self.advantest_quirk = False
@@ -232,25 +233,26 @@ class Instrument(object):
         if os.name == 'posix':
             if self.device.is_kernel_driver_active(0):
                 self.device.detach_kernel_driver(0)
-        
-        self.device.set_configuration()
-        self.device.set_interface_altsetting()
-        
-        # find USBTMC interface
+
+        # find first USBTMC interface
         for cfg in self.device:
             for iface in cfg:
                 if (self.device.idVendor == 0x1334) or \
                    (iface.bInterfaceClass == USBTMC_bInterfaceClass and
                     iface.bInterfaceSubClass == USBTMC_bInterfaceSubClass):
+                    self.cfg = cfg
                     self.iface = iface
                     break
             else:
                 continue
             break
-        
+
         if self.iface is None:
             raise UsbtmcException("Not a USBTMC device", 'init')
-        
+
+        self.cfg.set()
+        self.iface.set_altsetting()
+
         # set quirk flags if necessary
         if self.device.idVendor == 0x1334:
             # Advantest/ADCMT devices have a very odd USBTMC implementation
