@@ -165,7 +165,33 @@ class Instrument(object):
         self.term_char = None
         self.advantest_quirk = False
         self.advantest_locked = False
-        
+
+        self.bcdUSBTMC = 0
+        self.support_pulse = False
+        self.support_talk_only = False
+        self.support_listen_only = False
+        self.support_term_char = False
+
+        self.bcdUSB488 = 0
+        self.support_USB4882 = False
+        self.support_remote_local = False
+        self.support_trigger = False
+        self.support_scpi = False
+        self.support_SR = False
+        self.support_RL = False
+        self.support_DT = False
+
+        self.max_recv_size = 1024*1024
+
+        self.timeout = 1000
+
+        self.bulk_in_ep = None
+        self.bulk_out_ep = None
+        self.interrupt_in_ep = None
+
+        self.last_btag = 0
+        self.last_rstb_btag = 0
+
         resource = None
         
         # process arguments
@@ -209,16 +235,6 @@ class Instrument(object):
             self.idVendor = int(res['arg1'], 0)
             self.idProduct = int(res['arg2'], 0)
             self.iSerial = res['arg3']
-        
-        self.max_recv_size = 1024*1024
-        
-        self.timeout = 1000
-        
-        self.bulk_in_ep = None
-        self.bulk_out_ep = None
-        self.interrupt_in_ep = None
-        
-        self.last_btag = 0
         
         # find device
         if self.device is None:
@@ -300,27 +316,43 @@ class Instrument(object):
             0x0018,
             timeout=self.timeout)
         if (b[0] == USBTMC_STATUS_SUCCESS):
-            # process capabilities
-            pass
+            self.bcdUSBTMC = (b[3] << 8) + b[2]
+            self.support_pulse = b[4] & 4 != 0
+            self.support_talk_only = b[4] & 2 != 0
+            self.support_listen_only = b[4] & 1 != 0
+            self.support_term_char = b[5] & 1 != 0
+
+            if self.is_usb488():
+                self.bcdUSB488 = (b[13] << 8) + b[12]
+                self.support_USB4882 = b[4] & 4 != 0
+                self.support_remote_local = b[4] & 2 != 0
+                self.support_trigger = b[4] & 1 != 0
+                self.support_scpi = b[4] & 8 != 0
+                self.support_SR = b[4] & 4 != 0
+                self.support_RL = b[4] & 2 != 0
+                self.support_DT = b[4] & 1 != 0
+        else:
+            raise UsbtmcException("Get capabilities failed", 'get_capabilities')
 
     def pulse(self):
         """
         Send a pulse indicator request, this should blink a light
         for 500-1000ms and then turn off again. (Only if supported)
         """
-        b = self.device.ctrl_transfer(
-            usb.util.build_request_type(usb.util.CTRL_IN, usb.util.CTRL_TYPE_CLASS, usb.util.CTRL_RECIPIENT_INTERFACE),
-            USBTMC_REQUEST_INDICATOR_PULSE,
-            0x0000,
-            self.iface.index,
-            0x0001,
-            timeout=self.timeout)
-        if (b[0] == USBTMC_STATUS_SUCCESS):
-            pass
+        if self.support_pulse:
+            b = self.device.ctrl_transfer(
+                usb.util.build_request_type(usb.util.CTRL_IN, usb.util.CTRL_TYPE_CLASS, usb.util.CTRL_RECIPIENT_INTERFACE),
+                USBTMC_REQUEST_INDICATOR_PULSE,
+                0x0000,
+                self.iface.index,
+                0x0001,
+                timeout=self.timeout)
+            if (b[0] != USBTMC_STATUS_SUCCESS):
+                raise UsbtmcException("Pulse failed", 'pulse')
     
     # message header management
     def pack_bulk_out_header(self, msgid):
-        self.last_btag = btag = (self.last_btag % 255) + 1
+        self.last_btag = btag = (self.last_btag % 256) + 1
         return struct.pack('BBBx', msgid, btag, ~btag & 0xFF)
     
     def pack_dev_dep_msg_out_header(self, transfer_size, eom = True):
@@ -344,7 +376,11 @@ class Instrument(object):
     def pack_vendor_specific_in_header(self, transfer_size):
         hdr = self.pack_bulk_out_header(USBTMC_MSGID_VENDOR_SPECIFIC_IN)
         return hdr+struct.pack("<Lxxxx", transfer_size)
-    
+
+    def pack_usb488_trigger(self):
+        hdr = self.pack_bulk_out_header(USB488_MSGID_TRIGGER)
+        return hdr+b'\x00'*8
+
     def unpack_bulk_in_header(self, data):
         msgid, btag, btaginverse = struct.unpack_from('BBBx', data)
         return (msgid, btag, btaginverse)
@@ -468,15 +504,73 @@ class Instrument(object):
     
     def read_stb(self):
         "Read status byte"
-        raise NotImplementedError()
-    
+        if self.is_usb488():
+            rstb_btag = (self.last_rstb_btag % 128) + 1
+            if rstb_btag < 2:
+                rstb_btag = 2
+            self.last_rstb_btag = rstb_btag
+
+            b=self.device.ctrl_transfer(
+                usb.util.build_request_type(usb.util.CTRL_IN, usb.util.CTRL_TYPE_CLASS, usb.util.CTRL_RECIPIENT_INTERFACE),
+                USB488_READ_STATUS_BYTE,
+                rstb_btag,
+                self.iface.index,
+                0x0003,
+                timeout=self.timeout)
+            if (b[0] == USBTMC_STATUS_SUCCESS):
+                # check btag
+                if rstb_btag != b[1]:
+                    raise UsbtmcException("Read status byte btag mismatch", 'read_stb')
+                if self.interrupt_in_ep is None:
+                    # no interrupt channel, value is here
+                    return b[2]
+                else:
+                    # read response from interrupt channel
+                    resp = self.interrupt_in_ep.read(2, timeout=self.timeout)
+                    if resp[0] != rstb_btag + 128:
+                        raise UsbtmcException("Read status byte btag mismatch", 'read_stb')
+                    else:
+                        return resp[1]
+            else:
+                raise UsbtmcException("Read status failed", 'read_stb')
+        return int(self.ask("*STB?"))
+
     def trigger(self):
         "Send trigger command"
-        self.write("*TRG")
+        if self.support_trigger:
+            data = self.pack_usb488_trigger()
+            print(repr(data))
+            self.bulk_out_ep.write(data)
+        else:
+            self.write("*TRG")
     
     def clear(self):
         "Send clear command"
-        self.write("*CLS")
+        # Send INITIATE_CLEAR
+        b = self.device.ctrl_transfer(
+            usb.util.build_request_type(usb.util.CTRL_IN, usb.util.CTRL_TYPE_CLASS, usb.util.CTRL_RECIPIENT_INTERFACE),
+            USBTMC_REQUEST_INITIATE_CLEAR,
+            0x0000,
+            self.iface.index,
+            0x0001,
+            timeout=self.timeout)
+        if (b[0] == USBTMC_STATUS_SUCCESS):
+            # Initiate clear succeeded, wait for completion
+            while True:
+                # Check status
+                b = self.device.ctrl_transfer(
+                    usb.util.build_request_type(usb.util.CTRL_IN, usb.util.CTRL_TYPE_CLASS, usb.util.CTRL_RECIPIENT_INTERFACE),
+                    USBTMC_REQUEST_CHECK_CLEAR_STATUS,
+                    0x0000,
+                    self.iface.index,
+                    0x0002,
+                    timeout=self.timeout)
+                if (b[0] == USBTMC_STATUS_PENDING):
+                    time.sleep(0.1)
+                else:
+                    break
+            # Clear halt condition
+            self.device.clear_halt(self.bulk_out_ep)
     
     def remote(self):
         "Send remote command"
