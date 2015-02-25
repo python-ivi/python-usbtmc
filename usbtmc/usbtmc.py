@@ -352,7 +352,7 @@ class Instrument(object):
 
     # message header management
     def pack_bulk_out_header(self, msgid):
-        self.last_btag = btag = (self.last_btag % 256) + 1
+        self.last_btag = btag = (self.last_btag + 1) & 255
         return struct.pack('BBBx', msgid, btag, ~btag & 0xFF)
 
     def pack_dev_dep_msg_out_header(self, transfer_size, eom = True):
