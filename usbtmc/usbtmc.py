@@ -90,12 +90,12 @@ def parse_visa_resource_string(resource_string):
 # Exceptions
 class UsbtmcException(Exception):
     em = {0:  "No error"}
-    
+
     def __init__(self, err = None, note = None):
         self.err = err
         self.note = note
         self.msg = ''
-        
+
         if err is None:
             self.msg = note
         else:
@@ -108,48 +108,48 @@ class UsbtmcException(Exception):
                 self.msg = err
             if note is not None:
                 self.msg = "%s [%s]" % (self.msg, note)
-    
+
     def __str__(self):
         return self.msg
 
 def list_devices():
     "List all connected USBTMC devices"
-    
+
     def is_usbtmc_device(dev):
         for cfg in dev:
             d = usb.util.find_descriptor(cfg, bInterfaceClass = USBTMC_bInterfaceClass,
                                         bInterfaceSubClass = USBTMC_bInterfaceSubClass)
             is_advantest = dev.idVendor == 0x1334
             return d is not None or is_advantest
-    
+
     return list(usb.core.find(find_all = True, custom_match = is_usbtmc_device))
 
 def find_device(idVendor = None, idProduct = None, iSerial = None):
     "Find USBTMC instrument"
-    
+
     devs = list_devices()
-    
+
     if len(devs) == 0:
         return None
-    
+
     for dev in devs:
         if dev.idVendor != idVendor or dev.idProduct != idProduct:
             continue
-        
+
         if iSerial is None:
             return dev
         else:
             s = ''
-            
+
             # try reading serial number
             try:
                 s = usb.util.get_string(dev, dev.iSerialNumber)
             except:
                 pass
-            
+
             if iSerial == s:
                 return dev
-        
+
     return None
 
 class Instrument(object):
@@ -193,7 +193,7 @@ class Instrument(object):
         self.last_rstb_btag = 0
 
         resource = None
-        
+
         # process arguments
         if len(args) == 1:
             if type(args[0]) == str:
@@ -205,7 +205,7 @@ class Instrument(object):
             self.idProduct = args[1]
         if len(args) >= 3:
             self.iSerial = args[2]
-        
+
         for op in kwargs:
             val = kwargs[op]
             if op == 'idVendor':
@@ -222,7 +222,7 @@ class Instrument(object):
                 self.term_char = val
             elif op == 'resource':
                 resource = val
-        
+
         if resource is not None:
             res = parse_visa_resource_string(resource)
 
@@ -235,7 +235,7 @@ class Instrument(object):
             self.idVendor = int(res['arg1'], 0)
             self.idProduct = int(res['arg2'], 0)
             self.iSerial = res['arg3']
-        
+
         # find device
         if self.device is None:
             if self.idVendor is None or self.idProduct is None:
@@ -244,7 +244,7 @@ class Instrument(object):
                 self.device = find_device(self.idVendor, self.idProduct, self.iSerial)
                 if self.device is None:
                     raise UsbtmcException("Device not found", 'init')
-        
+
         # initialize device
         if os.name == 'posix':
             if self.device.is_kernel_driver_active(0):
@@ -281,7 +281,7 @@ class Instrument(object):
             ep_at = ep.bmAttributes
             ep_dir = ep.bEndpointAddress & usb.ENDPOINT_DIR_MASK
             ep_type = ep_at & usb.ENDPOINT_TYPE_MASK
-            
+
             if (ep_type == usb.ENDPOINT_TYPE_BULK):
                 if (ep_dir == usb.ENDPOINT_IN):
                     self.bulk_in_ep = ep
@@ -290,23 +290,23 @@ class Instrument(object):
             elif (ep_type == usb.ENDPOINT_TYPE_INTERRUPT):
                 if (ep_dir == usb.ENDPOINT_IN):
                     self.interrupt_in_ep = ep
-        
+
         if self.bulk_in_ep is None or self.bulk_out_ep is None:
             raise UsbtmcException("Invalid endpoint configuration", 'init')
-        
+
         self.reset()
-        
+
         time.sleep(0.01) # prevents a very repeatable pipe error
-        
+
         self.get_capabilities()
-    
+
     def reset(self):
         if os.name == 'posix':
             self.device.reset()
-    
+
     def is_usb488(self):
         return self.iface.bInterfaceProtocol == USB488_bInterfaceProtocol
-    
+
     def get_capabilities(self):
         b=self.device.ctrl_transfer(
             usb.util.build_request_type(usb.util.CTRL_IN, usb.util.CTRL_TYPE_CLASS, usb.util.CTRL_RECIPIENT_INTERFACE),
@@ -349,16 +349,19 @@ class Instrument(object):
                 timeout=self.timeout)
             if (b[0] != USBTMC_STATUS_SUCCESS):
                 raise UsbtmcException("Pulse failed", 'pulse')
-    
+
     # message header management
     def pack_bulk_out_header(self, msgid):
-        self.last_btag = btag = (self.last_btag % 255) + 1
+        btag = (self.last_btag + 1) & 0xFF
+        if btag == 0:
+            btag = 1  # btag should skip zero, don't ask me why
+        self.last_btag = btag
         return struct.pack('BBBx', msgid, btag, ~btag & 0xFF)
-    
+
     def pack_dev_dep_msg_out_header(self, transfer_size, eom = True):
         hdr = self.pack_bulk_out_header(USBTMC_MSGID_DEV_DEP_MSG_OUT)
         return hdr+struct.pack("<LBxxx", transfer_size, eom)
-    
+
     def pack_dev_dep_msg_in_header(self, transfer_size, term_char = None):
         hdr = self.pack_bulk_out_header(USBTMC_MSGID_DEV_DEP_MSG_IN)
         transfer_attributes = 0
@@ -368,11 +371,11 @@ class Instrument(object):
             transfer_attributes = 2
             term_char = self.term_char
         return hdr+struct.pack("<LBBxx", transfer_size, transfer_attributes, term_char)
-    
+
     def pack_vendor_specific_out_header(self, transfer_size):
         hdr = self.pack_bulk_out_header(USBTMC_MSGID_VENDOR_SPECIFIC_OUT)
         return hdr+struct.pack("<Lxxxx", transfer_size)
-    
+
     def pack_vendor_specific_in_header(self, transfer_size):
         hdr = self.pack_bulk_out_header(USBTMC_MSGID_VENDOR_SPECIFIC_IN)
         return hdr+struct.pack("<Lxxxx", transfer_size)
@@ -384,77 +387,77 @@ class Instrument(object):
     def unpack_bulk_in_header(self, data):
         msgid, btag, btaginverse = struct.unpack_from('BBBx', data)
         return (msgid, btag, btaginverse)
-    
+
     def unpack_dev_dep_resp_header(self, data):
         msgid, btag, btaginverse = self.unpack_bulk_in_header(data)
         transfer_size, transfer_attributes = struct.unpack_from('<LBxxx', data, 4)
         data = data[12:transfer_size+12]
         return (msgid, btag, btaginverse, transfer_size, transfer_attributes, data)
-    
+
     def write_raw(self, data):
         "Write binary data to instrument"
-        
+
         eom = False
-        
+
         num = len(data)
-        
+
         offset = 0
-        
+
         while num > 0:
             if num <= self.max_recv_size:
                 eom = True
-            
+
             block = data[offset:offset+self.max_recv_size]
             size = len(block)
-            
+
             data = self.pack_dev_dep_msg_out_header(size, eom) + block + b'\0'*((4 - (size % 4)) % 4)
-            
+
             self.bulk_out_ep.write(data)
-            
+
             offset += size
             num -= size
 
     def read_raw(self, num=-1):
         "Read binary data from instrument"
-        
+
         read_len = self.max_recv_size
         if num > 0 and num < self.max_recv_size:
             read_len = num
-        
+
         eom = False
-        
+
         term_char = None
-        
+
         if self.term_char is not None:
             term_char = self.term_char
-        
+
         read_data = b''
-        
+
         while not eom:
             req = self.pack_dev_dep_msg_in_header(read_len, term_char)
             self.bulk_out_ep.write(req)
-            
+
             resp = self.bulk_in_ep.read(read_len+12, timeout = self.timeout)
-            
+
             msgid, btag, btaginverse, transfer_size, transfer_attributes, data = self.unpack_dev_dep_resp_header(resp.tostring())
-            
+
             eom = transfer_attributes & 1
-            
+
             read_data += data
 
             # Advantest devices never signal EOI and may only send one read packet
             if self.advantest_quirk:
                 break
-            
+
             if num > 0:
                 num = num - len(data)
                 if num <= 0:
                     break
                 if num < read_len:
                     read_len = num
-            
+
         return read_data
-    
+
     def ask_raw(self, data, num=-1):
         "Write then read binary data"
         # Advantest/ADCMT hardware won't respond to a command unless it's in Local Lockout mode
@@ -467,7 +470,7 @@ class Instrument(object):
         finally:
             if self.advantest_quirk and not was_locked:
                 self.unlock()
-    
+
     def write(self, message, encoding = 'utf-8'):
         "Write string to instrument"
         if type(message) is tuple or type(message) is list:
@@ -475,7 +478,7 @@ class Instrument(object):
             for message_i in message:
                 self.write(message_i, encoding)
             return
-        
+
         self.write_raw(str(message).encode(encoding))
 
     def read(self, num=-1, encoding = 'utf-8'):
@@ -490,7 +493,7 @@ class Instrument(object):
             for message_i in message:
                 val.append(self.ask(message_i, num, encoding))
             return val
-        
+
         # Advantest/ADCMT hardware won't respond to a command unless it's in Local Lockout mode
         was_locked = self.advantest_locked
         try:
@@ -501,7 +504,7 @@ class Instrument(object):
         finally:
             if self.advantest_quirk and not was_locked:
                 self.unlock()
-    
+
     def read_stb(self):
         "Read status byte"
         if self.is_usb488():
@@ -543,7 +546,7 @@ class Instrument(object):
             self.bulk_out_ep.write(data)
         else:
             self.write("*TRG")
-    
+
     def clear(self):
         "Send clear command"
         # Send INITIATE_CLEAR
@@ -571,15 +574,15 @@ class Instrument(object):
                     break
             # Clear halt condition
             self.device.clear_halt(self.bulk_out_ep)
-    
+
     def remote(self):
         "Send remote command"
         raise NotImplementedError()
-    
+
     def local(self):
         "Send local command"
         raise NotImplementedError()
-    
+
     def lock(self):
         "Send lock command"
         if self.advantest_quirk:
@@ -589,7 +592,7 @@ class Instrument(object):
             self.device.ctrl_transfer(bmRequestType=0xA1, bRequest=0xA0, wValue=0x0001, wIndex=0x0000, data_or_wLength=1)
         else:
             raise NotImplementedError()
-    
+
     def unlock(self):
         "Send unlock command"
         if self.advantest_quirk:
