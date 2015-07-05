@@ -306,6 +306,9 @@ class Instrument(object):
 
     def release(self):
         usb.util.release_interface(self.device, self.iface)
+
+    def close(self):
+        self.release()
     
     def is_usb488(self):
         return self.iface.bInterfaceProtocol == USB488_bInterfaceProtocol
