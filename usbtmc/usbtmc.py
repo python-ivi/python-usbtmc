@@ -165,6 +165,7 @@ class Instrument(object):
         self.term_char = None
         self.advantest_quirk = False
         self.advantest_locked = False
+        self.skip_set_config = False
 
         self.bcdUSBTMC = 0
         self.support_pulse = False
@@ -222,6 +223,8 @@ class Instrument(object):
                 self.term_char = val
             elif op == 'resource':
                 resource = val
+            elif op == 'skip_set_config':
+                self.skip_set_config = True
         
         if resource is not None:
             res = parse_visa_resource_string(resource)
@@ -245,14 +248,13 @@ class Instrument(object):
                 if self.device is None:
                     raise UsbtmcException("Device not found", 'init')
         
-        # initialize device
-        if os.name == 'posix':
-            if self.device.is_kernel_driver_active(0):
-                self.device.detach_kernel_driver(0)
-
         # find first USBTMC interface
         for cfg in self.device:
             for iface in cfg:
+                if os.name == 'posix' and \
+                   self.device.is_kernel_driver_active(iface.bInterfaceNumber):
+                    self.device.detach_kernel_driver(iface.bInterfaceNumber)
+
                 if (self.device.idVendor == 0x1334) or \
                    (iface.bInterfaceClass == USBTMC_bInterfaceClass and
                     iface.bInterfaceSubClass == USBTMC_bInterfaceSubClass):
@@ -266,7 +268,11 @@ class Instrument(object):
         if self.iface is None:
             raise UsbtmcException("Not a USBTMC device", 'init')
 
-        self.cfg.set()
+        # Per https://github.com/walac/pyusb/issues/76,
+        # setting configuration may not work, so allow ability to skip.
+        if not self.skip_set_config:
+            self.cfg.set()
+
         self.iface.set_altsetting()
 
         # set quirk flags if necessary
