@@ -1,4 +1,3 @@
-
 from __future__ import with_statement
 
 # http://docs.python.org/distutils/
@@ -17,17 +16,17 @@ with open(version_py, 'r') as f:
     version = d['__version__']
 
 setup(
-    name = 'python-usbtmc',
-    description = 'Python USBTMC driver for controlling instruments over USB',
-    version = version,
-    long_description = '''This Python package supports the USBTMC instrument
-control protocol for controlling instruments over USB.''',
-    author = 'Alex Forencich',
+    name='python-usbtmc',
+    description='Python USBTMC driver for controlling instruments over USB',
+    version=version,
+    long_description='This Python package supports the USBTMC instrument'
+                     'control protocol for controlling instruments over USB.',
+    author='Alex Forencich',
     author_email = 'alex@alexforencich.com',
-    url = 'http://alexforencich.com/wiki/en/python-usbtmc/start',
-    download_url = 'http://github.com/python-ivi/python-usbtmc/tarball/master',
-    keywords = 'USB USBTMC measurement instrument',
-    license = 'MIT License',
+    url='http://alexforencich.com/wiki/en/python-usbtmc/start',
+    download_url='http://github.com/python-ivi/python-usbtmc/tarball/master',
+    keywords='USB usbtmc measurement instrument',
+    license='MIT License',
     classifiers=[
         'Development Status :: 4 - Beta',
         'Environment :: Console',
@@ -42,6 +41,5 @@ control protocol for controlling instruments over USB.''',
         'Programming Language :: Python :: 2',
         'Programming Language :: Python :: 3'
         ],
-    packages = ['usbtmc']
+    packages=['usbtmc']
 )
-
