@@ -246,9 +246,6 @@ class Instrument(object):
                     raise UsbtmcException("Device not found", 'init')
 
         # initialize device
-        if os.name == 'posix':
-            if self.device.is_kernel_driver_active(0):
-                self.device.detach_kernel_driver(0)
 
         # find first USBTMC interface
         for cfg in self.device:
@@ -266,7 +263,16 @@ class Instrument(object):
         if self.iface is None:
             raise UsbtmcException("Not a USBTMC device", 'init')
 
-        self.cfg.set()
+        # release kernel driver
+        if os.name == 'posix':
+            if self.device.is_kernel_driver_active(iface.bInterfaceNumber):
+                try:
+                    self.device.detach_kernel_driver(iface.bInterfaceNumber)
+                except usb.core.USBError as e:
+                    sys.exit("Could not detatch kernel driver from interface({0}): {1}".format(intf.bInterfaceNumber, str(e)))
+
+        if self.device.get_active_configuration() != self.cfg:
+            self.device.set_configuration(self.cfg)
         self.iface.set_altsetting()
 
         # set quirk flags if necessary
