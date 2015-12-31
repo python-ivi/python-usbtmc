@@ -247,6 +247,10 @@ class Instrument(object):
                 if self.device is None:
                     raise UsbtmcException("Device not found", 'init')
 
+    def __del__(self):
+        if self.connected:
+            self.close()
+
     def open(self):
         if self.connected:
             return
