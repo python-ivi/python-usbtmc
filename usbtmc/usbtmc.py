@@ -143,7 +143,7 @@ def find_device(idVendor = None, idProduct = None, iSerial = None):
 
             # try reading serial number
             try:
-                s = usb.util.get_string(dev, dev.iSerialNumber)
+                s = dev.serial_number
             except:
                 pass
 
@@ -191,6 +191,8 @@ class Instrument(object):
 
         self.last_btag = 0
         self.last_rstb_btag = 0
+
+        self.connected = False
 
         resource = None
 
@@ -244,6 +246,10 @@ class Instrument(object):
                 self.device = find_device(self.idVendor, self.idProduct, self.iSerial)
                 if self.device is None:
                     raise UsbtmcException("Device not found", 'init')
+
+    def open(self):
+        if self.connected:
+            return
 
         # initialize device
 
@@ -300,13 +306,26 @@ class Instrument(object):
         if self.bulk_in_ep is None or self.bulk_out_ep is None:
             raise UsbtmcException("Invalid endpoint configuration", 'init')
 
+        self.connected = True
+
         self.reset()
 
         time.sleep(0.01) # prevents a very repeatable pipe error
 
         self.get_capabilities()
 
+    def close(self):
+        if not self.connected:
+            return
+
+        usb.util.dispose_resources(self.device)
+
+        self.connected = False
+
     def reset(self):
+        if not self.connected:
+            return
+
         if os.name == 'posix':
             self.device.reset()
 
@@ -314,6 +333,10 @@ class Instrument(object):
         return self.iface.bInterfaceProtocol == USB488_bInterfaceProtocol
 
     def get_capabilities(self):
+
+        if not self.connected:
+            self.open()
+
         b=self.device.ctrl_transfer(
             usb.util.build_request_type(usb.util.CTRL_IN, usb.util.CTRL_TYPE_CLASS, usb.util.CTRL_RECIPIENT_INTERFACE),
             USBTMC_REQUEST_GET_CAPABILITIES,
@@ -345,6 +368,9 @@ class Instrument(object):
         Send a pulse indicator request, this should blink a light
         for 500-1000ms and then turn off again. (Only if supported)
         """
+        if not self.connected:
+            self.open()
+
         if self.support_pulse:
             b = self.device.ctrl_transfer(
                 usb.util.build_request_type(usb.util.CTRL_IN, usb.util.CTRL_TYPE_CLASS, usb.util.CTRL_RECIPIENT_INTERFACE),
@@ -400,6 +426,9 @@ class Instrument(object):
     def write_raw(self, data):
         "Write binary data to instrument"
 
+        if not self.connected:
+            self.open()
+
         eom = False
 
         num = len(data)
@@ -422,6 +451,9 @@ class Instrument(object):
 
     def read_raw(self, num=-1):
         "Read binary data from instrument"
+
+        if not self.connected:
+            self.open()
 
         read_len = self.max_recv_size
         if num > 0 and num < self.max_recv_size:
@@ -510,6 +542,10 @@ class Instrument(object):
 
     def read_stb(self):
         "Read status byte"
+
+        if not self.connected:
+            self.open()
+
         if self.is_usb488():
             rstb_btag = (self.last_rstb_btag % 128) + 1
             if rstb_btag < 2:
@@ -539,10 +575,15 @@ class Instrument(object):
                         return resp[1]
             else:
                 raise UsbtmcException("Read status failed", 'read_stb')
-        return int(self.ask("*STB?"))
+        else:
+            return int(self.ask("*STB?"))
 
     def trigger(self):
         "Send trigger command"
+
+        if not self.connected:
+            self.open()
+
         if self.support_trigger:
             data = self.pack_usb488_trigger()
             print(repr(data))
@@ -552,6 +593,10 @@ class Instrument(object):
 
     def clear(self):
         "Send clear command"
+
+        if not self.connected:
+            self.open()
+
         # Send INITIATE_CLEAR
         b = self.device.ctrl_transfer(
             usb.util.build_request_type(usb.util.CTRL_IN, usb.util.CTRL_TYPE_CLASS, usb.util.CTRL_RECIPIENT_INTERFACE),
@@ -588,6 +633,10 @@ class Instrument(object):
 
     def lock(self):
         "Send lock command"
+
+        if not self.connected:
+            self.open()
+
         if self.advantest_quirk:
             # This Advantest/ADCMT vendor-specific control command enables remote control and must be sent before any commands are exchanged
             # (otherwise READ commands will only retrieve the latest measurement)
@@ -598,6 +647,10 @@ class Instrument(object):
 
     def unlock(self):
         "Send unlock command"
+
+        if not self.connected:
+            self.open()
+
         if self.advantest_quirk:
             # This Advantest/ADCMT vendor-specific control command enables remote control and must be sent before any commands are exchanged
             # (otherwise READ commands will only retrieve the latest measurement)
@@ -607,6 +660,10 @@ class Instrument(object):
             raise NotImplementedError()
 
     def advantest_read_myid(self):
+
+        if not self.connected:
+            self.open()
+
         "Read MyID value from Advantest and ADCMT devices"
         if self.advantest_quirk:
             # This Advantest/ADCMT vendor-specific control command reads the "MyID" identifier
