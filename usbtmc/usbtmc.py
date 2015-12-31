@@ -275,13 +275,13 @@ class Instrument(object):
 
         # release kernel driver
         if os.name == 'posix':
-            if self.device.is_kernel_driver_active(iface.bInterfaceNumber):
+            if self.device.is_kernel_driver_active(self.iface.bInterfaceNumber):
                 try:
-                    self.device.detach_kernel_driver(iface.bInterfaceNumber)
+                    self.device.detach_kernel_driver(self.iface.bInterfaceNumber)
                 except usb.core.USBError as e:
-                    sys.exit("Could not detatch kernel driver from interface({0}): {1}".format(intf.bInterfaceNumber, str(e)))
+                    sys.exit("Could not detatch kernel driver from interface({0}): {1}".format(self.iface.bInterfaceNumber, str(e)))
 
-        if self.device.get_active_configuration() != self.cfg:
+        if self.device.get_active_configuration().bConfigurationValue != self.cfg.bConfigurationValue:
             self.device.set_configuration(self.cfg)
         self.iface.set_altsetting()
 
