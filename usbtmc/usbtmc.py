@@ -193,6 +193,8 @@ class Instrument(object):
         self.last_rstb_btag = 0
 
         self.connected = False
+        self.reattach = []
+        self.old_config = None
 
         resource = None
 
@@ -273,15 +275,33 @@ class Instrument(object):
         if self.iface is None:
             raise UsbtmcException("Not a USBTMC device", 'init')
 
-        # release kernel driver
-        if os.name == 'posix':
-            if self.device.is_kernel_driver_active(self.iface.bInterfaceNumber):
-                try:
-                    self.device.detach_kernel_driver(self.iface.bInterfaceNumber)
-                except usb.core.USBError as e:
-                    sys.exit("Could not detatch kernel driver from interface({0}): {1}".format(self.iface.bInterfaceNumber, str(e)))
+        self.old_config = self.device.get_active_configuration()
 
-        if self.device.get_active_configuration().bConfigurationValue != self.cfg.bConfigurationValue:
+        if self.device.get_active_configuration().bConfigurationValue == self.cfg.bConfigurationValue:
+            # already set to correct configuration
+
+            # release kernel driver on USBTMC interface
+            if os.name == 'posix':
+                if self.device.is_kernel_driver_active(self.iface.bInterfaceNumber):
+                    self.reattach.append(self.iface.bInterfaceNumber)
+                    try:
+                        self.device.detach_kernel_driver(self.iface.bInterfaceNumber)
+                    except usb.core.USBError as e:
+                        sys.exit("Could not detatch kernel driver from interface({0}): {1}".format(self.iface.bInterfaceNumber, str(e)))
+        else:
+            # wrong configuration
+
+            # release all kernel drivers
+            if os.name == 'posix':
+                for iface in self.device.get_active_configuration():
+                    if self.device.is_kernel_driver_active(iface.bInterfaceNumber):
+                        self.reattach.append(iface.bInterfaceNumber)
+                        try:
+                            self.device.detach_kernel_driver(iface.bInterfaceNumber)
+                        except usb.core.USBError as e:
+                            sys.exit("Could not detatch kernel driver from interface({0}): {1}".format(iface.bInterfaceNumber, str(e)))
+
+            # set proper configuration
             self.device.set_configuration(self.cfg)
 
         # don't need to set altsetting - USBTMC devices have 1 altsetting as per the spec
@@ -322,6 +342,22 @@ class Instrument(object):
             return
 
         usb.util.dispose_resources(self.device)
+
+        try:
+            # reset configuration
+            if self.device.get_active_configuration().bConfigurationValue != self.old_config.bConfigurationValue:
+                self.device.set_configuration(self.old_config)
+
+            # try to reattach kernel driver
+            for iface in self.reattach:
+                try:
+                    self.device.attach_kernel_driver(iface)
+                except:
+                    pass
+        except:
+            pass
+
+        self.reattach = []
 
         self.connected = False
 
