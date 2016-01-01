@@ -310,17 +310,16 @@ class Instrument(object):
 
         # find endpoints
         for ep in self.iface:
-            ep_at = ep.bmAttributes
-            ep_dir = ep.bEndpointAddress & usb.ENDPOINT_DIR_MASK
-            ep_type = ep_at & usb.ENDPOINT_TYPE_MASK
+            ep_dir = usb.util.endpoint_direction(ep.bEndpointAddress)
+            ep_type = usb.util.endpoint_type(ep.bmAttributes)
 
-            if (ep_type == usb.ENDPOINT_TYPE_BULK):
-                if (ep_dir == usb.ENDPOINT_IN):
+            if (ep_type == usb.util.ENDPOINT_TYPE_BULK):
+                if (ep_dir == usb.util.ENDPOINT_IN):
                     self.bulk_in_ep = ep
-                elif (ep_dir == usb.ENDPOINT_OUT):
+                elif (ep_dir == usb.util.ENDPOINT_OUT):
                     self.bulk_out_ep = ep
-            elif (ep_type == usb.ENDPOINT_TYPE_INTERRUPT):
-                if (ep_dir == usb.ENDPOINT_IN):
+            elif (ep_type == usb.util.ENDPOINT_TYPE_INTR):
+                if (ep_dir == usb.util.ENDPOINT_IN):
                     self.interrupt_in_ep = ep
 
         if self.bulk_in_ep is None or self.bulk_out_ep is None:
