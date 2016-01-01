@@ -67,6 +67,8 @@ USB488_REN_CONTROL      = 160
 USB488_GOTO_LOCAL       = 161
 USB488_LOCAL_LOCKOUT    = 162
 
+USBTMC_HEADER_SIZE = 12
+
 def parse_visa_resource_string(resource_string):
     # valid resource strings:
     # USB::1234::5678::INSTR
@@ -181,7 +183,7 @@ class Instrument(object):
         self.support_RL = False
         self.support_DT = False
 
-        self.max_recv_size = 1024*1024
+        self.max_packet_size = 512 - USBTMC_HEADER_SIZE - 3
 
         self.timeout = 1000
 
@@ -306,13 +308,6 @@ class Instrument(object):
 
         # don't need to set altsetting - USBTMC devices have 1 altsetting as per the spec
 
-        # set quirk flags if necessary
-        if self.device.idVendor == 0x1334:
-            # Advantest/ADCMT devices have a very odd USBTMC implementation
-            # which requires max 63 byte reads and never signals EOI on read
-            self.max_recv_size = 63
-            self.advantest_quirk = True
-
         # find endpoints
         for ep in self.iface:
             ep_at = ep.bmAttributes
@@ -330,6 +325,15 @@ class Instrument(object):
 
         if self.bulk_in_ep is None or self.bulk_out_ep is None:
             raise UsbtmcException("Invalid endpoint configuration", 'init')
+
+        self.max_packet_size = min(self.bulk_out_ep.wMaxPacketSize, self.bulk_in_ep.wMaxPacketSize) - USBTMC_HEADER_SIZE
+
+        # set quirk flags if necessary
+        if self.device.idVendor == 0x1334:
+            # Advantest/ADCMT devices have a very odd USBTMC implementation
+            # which requires max 63 byte reads and never signals EOI on read
+            self.max_packet_size = 63
+            self.advantest_quirk = True
 
         self.connected = True
 
@@ -468,10 +472,10 @@ class Instrument(object):
         offset = 0
 
         while num > 0:
-            if num <= self.max_recv_size:
+            if num <= self.max_packet_size:
                 eom = True
 
-            block = data[offset:offset+self.max_recv_size]
+            block = data[offset:offset+self.max_packet_size]
             size = len(block)
 
             req = self.pack_dev_dep_msg_out_header(size, eom) + block + b'\0'*((4 - (size % 4)) % 4)
@@ -486,8 +490,8 @@ class Instrument(object):
         if not self.connected:
             self.open()
 
-        read_len = self.max_recv_size
-        if num > 0 and num < self.max_recv_size:
+        read_len = self.max_packet_size
+        if num > 0 and num < read_len:
             read_len = num
 
         eom = False
