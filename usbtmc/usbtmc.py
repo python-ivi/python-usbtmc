@@ -312,9 +312,7 @@ class Instrument(object):
 
         self.connected = True
 
-        self.reset()
-
-        time.sleep(0.01) # prevents a very repeatable pipe error
+        self.clear()
 
         self.get_capabilities()
 
@@ -325,13 +323,6 @@ class Instrument(object):
         usb.util.dispose_resources(self.device)
 
         self.connected = False
-
-    def reset(self):
-        if not self.connected:
-            return
-
-        if os.name == 'posix':
-            self.device.reset()
 
     def is_usb488(self):
         return self.iface.bInterfaceProtocol == USB488_bInterfaceProtocol
