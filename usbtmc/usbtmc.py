@@ -624,7 +624,9 @@ class Instrument(object):
                 else:
                     break
             # Clear halt condition
-            self.device.clear_halt(self.bulk_out_ep)
+            self.bulk_out_ep.clear_halt()
+        else:
+            raise UsbtmcException("Clear failed", 'clear')
 
     def remote(self):
         "Send remote command"
