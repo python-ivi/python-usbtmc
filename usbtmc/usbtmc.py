@@ -283,7 +283,8 @@ class Instrument(object):
 
         if self.device.get_active_configuration().bConfigurationValue != self.cfg.bConfigurationValue:
             self.device.set_configuration(self.cfg)
-        self.iface.set_altsetting()
+
+        # don't need to set altsetting - USBTMC devices have 1 altsetting as per the spec
 
         # set quirk flags if necessary
         if self.device.idVendor == 0x1334:
