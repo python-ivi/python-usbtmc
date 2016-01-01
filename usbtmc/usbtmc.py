@@ -446,9 +446,8 @@ class Instrument(object):
             block = data[offset:offset+self.max_recv_size]
             size = len(block)
 
-            data = self.pack_dev_dep_msg_out_header(size, eom) + block + b'\0'*((4 - (size % 4)) % 4)
-
-            self.bulk_out_ep.write(data)
+            req = self.pack_dev_dep_msg_out_header(size, eom) + block + b'\0'*((4 - (size % 4)) % 4)
+            self.bulk_out_ep.write(req)
 
             offset += size
             num -= size
