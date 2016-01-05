@@ -196,7 +196,7 @@ class Instrument(object):
 
         self.connected = False
         self.reattach = []
-        self.old_config = None
+        self.old_cfg = None
 
         resource = None
 
@@ -277,9 +277,9 @@ class Instrument(object):
         if self.iface is None:
             raise UsbtmcException("Not a USBTMC device", 'init')
 
-        self.old_config = self.device.get_active_configuration()
+        self.old_cfg = self.device.get_active_configuration()
 
-        if self.device.get_active_configuration().bConfigurationValue == self.cfg.bConfigurationValue:
+        if self.old_cfg.bConfigurationValue == self.cfg.bConfigurationValue:
             # already set to correct configuration
 
             # release kernel driver on USBTMC interface
@@ -295,7 +295,7 @@ class Instrument(object):
 
             # release all kernel drivers
             if os.name == 'posix':
-                for iface in self.device.get_active_configuration():
+                for iface in self.old_cfg:
                     if self.device.is_kernel_driver_active(iface.bInterfaceNumber):
                         self.reattach.append(iface.bInterfaceNumber)
                         try:
@@ -346,8 +346,8 @@ class Instrument(object):
 
         try:
             # reset configuration
-            if self.device.get_active_configuration().bConfigurationValue != self.old_config.bConfigurationValue:
-                self.device.set_configuration(self.old_config)
+            if self.cfg.bConfigurationValue != self.old_cfg.bConfigurationValue:
+                self.device.set_configuration(self.old_cfg)
 
             # try to reattach kernel driver
             for iface in self.reattach:
