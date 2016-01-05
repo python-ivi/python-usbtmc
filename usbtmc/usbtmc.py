@@ -30,6 +30,7 @@ import struct
 import time
 import os
 import re
+import sys
 
 # constants
 USBTMC_bInterfaceClass    = 0xFE
@@ -506,7 +507,12 @@ class Instrument(object):
 
             resp = self.bulk_in_ep.read(read_len+USBTMC_HEADER_SIZE+3, timeout = self.timeout)
 
-            msgid, btag, btaginverse, transfer_size, transfer_attributes, data = self.unpack_dev_dep_resp_header(resp.tostring())
+            if sys.version_info >= (3, 0):
+                resp = resp.tobytes()
+            else:
+                resp = resp.tostring()
+
+            msgid, btag, btaginverse, transfer_size, transfer_attributes, data = self.unpack_dev_dep_resp_header(resp)
 
             eom = transfer_attributes & 1
 
