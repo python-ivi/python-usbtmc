@@ -289,9 +289,8 @@ class Instrument(object):
             # wrong configuration
 
             # release all kernel drivers
-            if os.name == 'posix':
-                for iface in self.old_cfg:
-                    self._release_kernel_driver(iface.bInterfaceNumber)
+            for iface in self.old_cfg:
+                self._release_kernel_driver(iface.bInterfaceNumber)
 
             # set proper configuration
             self.device.set_configuration(self.cfg)
