@@ -271,8 +271,8 @@ class Instrument(object):
                     self.cfg = cfg
                     self.iface = iface
                     break
-            else:
-                continue
+                else:
+                    continue
             break
 
         if self.iface is None:
