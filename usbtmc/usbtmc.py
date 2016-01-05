@@ -186,7 +186,7 @@ class Instrument(object):
 
         self.max_transfer_size = 1024*1024
 
-        self.timeout = 1000
+        self.timeout = 1.0
 
         self.bulk_in_ep = None
         self.bulk_out_ep = None
@@ -377,7 +377,7 @@ class Instrument(object):
             0x0000,
             self.iface.index,
             0x0018,
-            timeout=self.timeout)
+            timeout=int(self.timeout*1000))
         if (b[0] == USBTMC_STATUS_SUCCESS):
             self.bcdUSBTMC = (b[3] << 8) + b[2]
             self.support_pulse = b[4] & 4 != 0
@@ -412,7 +412,7 @@ class Instrument(object):
                 0x0000,
                 self.iface.index,
                 0x0001,
-                timeout=self.timeout)
+                timeout=int(self.timeout*1000))
             if (b[0] != USBTMC_STATUS_SUCCESS):
                 raise UsbtmcException("Pulse failed", 'pulse')
 
@@ -505,7 +505,7 @@ class Instrument(object):
             req = self.pack_dev_dep_msg_in_header(read_len, term_char)
             self.bulk_out_ep.write(req)
 
-            resp = self.bulk_in_ep.read(read_len+USBTMC_HEADER_SIZE+3, timeout = self.timeout)
+            resp = self.bulk_in_ep.read(read_len+USBTMC_HEADER_SIZE+3, timeout = int(self.timeout*1000))
 
             if sys.version_info >= (3, 0):
                 resp = resp.tobytes()
@@ -596,7 +596,7 @@ class Instrument(object):
                 rstb_btag,
                 self.iface.index,
                 0x0003,
-                timeout=self.timeout)
+                timeout=int(self.timeout*1000))
             if (b[0] == USBTMC_STATUS_SUCCESS):
                 # check btag
                 if rstb_btag != b[1]:
@@ -606,7 +606,7 @@ class Instrument(object):
                     return b[2]
                 else:
                     # read response from interrupt channel
-                    resp = self.interrupt_in_ep.read(2, timeout=self.timeout)
+                    resp = self.interrupt_in_ep.read(2, timeout=int(self.timeout*1000))
                     if resp[0] != rstb_btag + 128:
                         raise UsbtmcException("Read status byte btag mismatch", 'read_stb')
                     else:
@@ -642,7 +642,7 @@ class Instrument(object):
             0x0000,
             self.iface.index,
             0x0001,
-            timeout=self.timeout)
+            timeout=int(self.timeout*1000))
         if (b[0] == USBTMC_STATUS_SUCCESS):
             # Initiate clear succeeded, wait for completion
             while True:
@@ -653,7 +653,7 @@ class Instrument(object):
                     0x0000,
                     self.iface.index,
                     0x0002,
-                    timeout=self.timeout)
+                    timeout=int(self.timeout*1000))
                 if (b[0] == USBTMC_STATUS_PENDING):
                     time.sleep(0.1)
                 else:
