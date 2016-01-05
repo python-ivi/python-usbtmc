@@ -70,6 +70,7 @@ USB488_LOCAL_LOCKOUT    = 162
 
 USBTMC_HEADER_SIZE = 12
 
+
 def parse_visa_resource_string(resource_string):
     # valid resource strings:
     # USB::1234::5678::INSTR
@@ -82,19 +83,20 @@ def parse_visa_resource_string(resource_string):
 
     if m is not None:
         return dict(
-            type = m.group('type').upper(),
-            prefix = m.group('prefix'),
-            arg1 = m.group('arg1'),
-            arg2 = m.group('arg2'),
-            arg3 = m.group('arg3'),
-            suffix = m.group('suffix')
+            type=m.group('type').upper(),
+            prefix=m.group('prefix'),
+            arg1=m.group('arg1'),
+            arg2=m.group('arg2'),
+            arg3=m.group('arg3'),
+            suffix=m.group('suffix')
         )
+
 
 # Exceptions
 class UsbtmcException(Exception):
     em = {0:  "No error"}
 
-    def __init__(self, err = None, note = None):
+    def __init__(self, err=None, note=None):
         self.err = err
         self.note = note
         self.msg = ''
@@ -115,19 +117,21 @@ class UsbtmcException(Exception):
     def __str__(self):
         return self.msg
 
+
 def list_devices():
     "List all connected USBTMC devices"
 
     def is_usbtmc_device(dev):
         for cfg in dev:
-            d = usb.util.find_descriptor(cfg, bInterfaceClass = USBTMC_bInterfaceClass,
-                                        bInterfaceSubClass = USBTMC_bInterfaceSubClass)
+            d = usb.util.find_descriptor(cfg, bInterfaceClass=USBTMC_bInterfaceClass,
+                                         bInterfaceSubClass=USBTMC_bInterfaceSubClass)
             is_advantest = dev.idVendor == 0x1334
             return d is not None or is_advantest
 
-    return list(usb.core.find(find_all = True, custom_match = is_usbtmc_device))
+    return list(usb.core.find(find_all=True, custom_match=is_usbtmc_device))
 
-def find_device(idVendor = None, idProduct = None, iSerial = None):
+
+def find_device(idVendor=None, idProduct=None, iSerial=None):
     "Find USBTMC instrument"
 
     devs = list_devices()
@@ -154,6 +158,7 @@ def find_device(idVendor = None, idProduct = None, iSerial = None):
                 return dev
 
     return None
+
 
 class Instrument(object):
     "USBTMC instrument interface client"
@@ -271,8 +276,8 @@ class Instrument(object):
                     self.cfg = cfg
                     self.iface = iface
                     break
-            else:
-                continue
+                else:
+                    continue
             break
 
         if self.iface is None:
@@ -284,25 +289,13 @@ class Instrument(object):
             # already set to correct configuration
 
             # release kernel driver on USBTMC interface
-            if os.name == 'posix':
-                if self.device.is_kernel_driver_active(self.iface.bInterfaceNumber):
-                    self.reattach.append(self.iface.bInterfaceNumber)
-                    try:
-                        self.device.detach_kernel_driver(self.iface.bInterfaceNumber)
-                    except usb.core.USBError as e:
-                        sys.exit("Could not detatch kernel driver from interface({0}): {1}".format(self.iface.bInterfaceNumber, str(e)))
+            self._release_kernel_driver(self.iface.bInterfaceNumber)
         else:
             # wrong configuration
 
             # release all kernel drivers
-            if os.name == 'posix':
-                for iface in self.old_cfg:
-                    if self.device.is_kernel_driver_active(iface.bInterfaceNumber):
-                        self.reattach.append(iface.bInterfaceNumber)
-                        try:
-                            self.device.detach_kernel_driver(iface.bInterfaceNumber)
-                        except usb.core.USBError as e:
-                            sys.exit("Could not detatch kernel driver from interface({0}): {1}".format(iface.bInterfaceNumber, str(e)))
+            for iface in self.old_cfg:
+                self._release_kernel_driver(iface.bInterfaceNumber)
 
             # set proper configuration
             self.device.set_configuration(self.cfg)
@@ -371,13 +364,13 @@ class Instrument(object):
         if not self.connected:
             self.open()
 
-        b=self.device.ctrl_transfer(
-            usb.util.build_request_type(usb.util.CTRL_IN, usb.util.CTRL_TYPE_CLASS, usb.util.CTRL_RECIPIENT_INTERFACE),
-            USBTMC_REQUEST_GET_CAPABILITIES,
-            0x0000,
-            self.iface.index,
-            0x0018,
-            timeout=int(self.timeout*1000))
+        b = self.device.ctrl_transfer(
+              usb.util.build_request_type(usb.util.CTRL_IN, usb.util.CTRL_TYPE_CLASS, usb.util.CTRL_RECIPIENT_INTERFACE),
+              USBTMC_REQUEST_GET_CAPABILITIES,
+              0x0000,
+              self.iface.index,
+              0x0018,
+              timeout=int(self.timeout*1000))
         if (b[0] == USBTMC_STATUS_SUCCESS):
             self.bcdUSBTMC = (b[3] << 8) + b[2]
             self.support_pulse = b[4] & 4 != 0
@@ -407,12 +400,12 @@ class Instrument(object):
 
         if self.support_pulse:
             b = self.device.ctrl_transfer(
-                usb.util.build_request_type(usb.util.CTRL_IN, usb.util.CTRL_TYPE_CLASS, usb.util.CTRL_RECIPIENT_INTERFACE),
-                USBTMC_REQUEST_INDICATOR_PULSE,
-                0x0000,
-                self.iface.index,
-                0x0001,
-                timeout=int(self.timeout*1000))
+                  usb.util.build_request_type(usb.util.CTRL_IN, usb.util.CTRL_TYPE_CLASS, usb.util.CTRL_RECIPIENT_INTERFACE),
+                  USBTMC_REQUEST_INDICATOR_PULSE,
+                  0x0000,
+                  self.iface.index,
+                  0x0001,
+                  timeout=int(self.timeout*1000))
             if (b[0] != USBTMC_STATUS_SUCCESS):
                 raise UsbtmcException("Pulse failed", 'pulse')
 
@@ -489,7 +482,7 @@ class Instrument(object):
             self.open()
 
         read_len = self.max_transfer_size
-        if num > 0 and num < read_len:
+        if 0 < num < read_len:
             read_len = num
 
         eom = False
@@ -544,7 +537,7 @@ class Instrument(object):
             if self.advantest_quirk and not was_locked:
                 self.unlock()
 
-    def write(self, message, encoding = 'utf-8'):
+    def write(self, message, encoding='utf-8'):
         "Write string to instrument"
         if type(message) is tuple or type(message) is list:
             # recursive call for a list of commands
@@ -554,11 +547,11 @@ class Instrument(object):
 
         self.write_raw(str(message).encode(encoding))
 
-    def read(self, num=-1, encoding = 'utf-8'):
+    def read(self, num=-1, encoding='utf-8'):
         "Read string from instrument"
         return self.read_raw(num).decode(encoding).rstrip('\r\n')
 
-    def ask(self, message, num=-1, encoding = 'utf-8'):
+    def ask(self, message, num=-1, encoding='utf-8'):
         "Write then read string"
         if type(message) is tuple or type(message) is list:
             # recursive call for a list of commands
@@ -590,13 +583,13 @@ class Instrument(object):
                 rstb_btag = 2
             self.last_rstb_btag = rstb_btag
 
-            b=self.device.ctrl_transfer(
-                usb.util.build_request_type(usb.util.CTRL_IN, usb.util.CTRL_TYPE_CLASS, usb.util.CTRL_RECIPIENT_INTERFACE),
-                USB488_READ_STATUS_BYTE,
-                rstb_btag,
-                self.iface.index,
-                0x0003,
-                timeout=int(self.timeout*1000))
+            b = self.device.ctrl_transfer(
+                  usb.util.build_request_type(usb.util.CTRL_IN, usb.util.CTRL_TYPE_CLASS, usb.util.CTRL_RECIPIENT_INTERFACE),
+                  USB488_READ_STATUS_BYTE,
+                  rstb_btag,
+                  self.iface.index,
+                  0x0003,
+                  timeout=int(self.timeout*1000))
             if (b[0] == USBTMC_STATUS_SUCCESS):
                 # check btag
                 if rstb_btag != b[1]:
@@ -637,23 +630,23 @@ class Instrument(object):
 
         # Send INITIATE_CLEAR
         b = self.device.ctrl_transfer(
-            usb.util.build_request_type(usb.util.CTRL_IN, usb.util.CTRL_TYPE_CLASS, usb.util.CTRL_RECIPIENT_INTERFACE),
-            USBTMC_REQUEST_INITIATE_CLEAR,
-            0x0000,
-            self.iface.index,
-            0x0001,
-            timeout=int(self.timeout*1000))
+              usb.util.build_request_type(usb.util.CTRL_IN, usb.util.CTRL_TYPE_CLASS, usb.util.CTRL_RECIPIENT_INTERFACE),
+              USBTMC_REQUEST_INITIATE_CLEAR,
+              0x0000,
+              self.iface.index,
+              0x0001,
+              timeout=int(self.timeout*1000))
         if (b[0] == USBTMC_STATUS_SUCCESS):
             # Initiate clear succeeded, wait for completion
             while True:
                 # Check status
                 b = self.device.ctrl_transfer(
-                    usb.util.build_request_type(usb.util.CTRL_IN, usb.util.CTRL_TYPE_CLASS, usb.util.CTRL_RECIPIENT_INTERFACE),
-                    USBTMC_REQUEST_CHECK_CLEAR_STATUS,
-                    0x0000,
-                    self.iface.index,
-                    0x0002,
-                    timeout=int(self.timeout*1000))
+                      usb.util.build_request_type(usb.util.CTRL_IN, usb.util.CTRL_TYPE_CLASS, usb.util.CTRL_RECIPIENT_INTERFACE),
+                      USBTMC_REQUEST_CHECK_CLEAR_STATUS,
+                      0x0000,
+                      self.iface.index,
+                      0x0002,
+                      timeout=int(self.timeout*1000))
                 if (b[0] == USBTMC_STATUS_PENDING):
                     time.sleep(0.1)
                 else:
@@ -714,3 +707,13 @@ class Instrument(object):
         else:
             raise NotImplementedError()
 
+    def _release_kernel_driver(self, interface_number):
+        if os.name == 'posix':
+            if self.device.is_kernel_driver_active(interface_number):
+                self.reattach.append(interface_number)
+                try:
+                    self.device.detach_kernel_driver(interface_number)
+                except usb.core.USBError as e:
+                    sys.exit(
+                        "Could not detach kernel driver from interface({0}): {1}".format(interface_number,
+                                                                                         str(e)))
