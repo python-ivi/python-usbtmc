@@ -284,25 +284,14 @@ class Instrument(object):
             # already set to correct configuration
 
             # release kernel driver on USBTMC interface
-            if os.name == 'posix':
-                if self.device.is_kernel_driver_active(self.iface.bInterfaceNumber):
-                    self.reattach.append(self.iface.bInterfaceNumber)
-                    try:
-                        self.device.detach_kernel_driver(self.iface.bInterfaceNumber)
-                    except usb.core.USBError as e:
-                        sys.exit("Could not detatch kernel driver from interface({0}): {1}".format(self.iface.bInterfaceNumber, str(e)))
+            self._release_kernel_driver(self.iface.bInterfaceNumber)
         else:
             # wrong configuration
 
             # release all kernel drivers
             if os.name == 'posix':
                 for iface in self.old_cfg:
-                    if self.device.is_kernel_driver_active(iface.bInterfaceNumber):
-                        self.reattach.append(iface.bInterfaceNumber)
-                        try:
-                            self.device.detach_kernel_driver(iface.bInterfaceNumber)
-                        except usb.core.USBError as e:
-                            sys.exit("Could not detatch kernel driver from interface({0}): {1}".format(iface.bInterfaceNumber, str(e)))
+                    self._release_kernel_driver(iface.bInterfaceNumber)
 
             # set proper configuration
             self.device.set_configuration(self.cfg)
@@ -714,3 +703,13 @@ class Instrument(object):
         else:
             raise NotImplementedError()
 
+    def _release_kernel_driver(self, interface_number):
+        if os.name == 'posix':
+            if self.device.is_kernel_driver_active(interface_number):
+                self.reattach.append(interface_number)
+                try:
+                    self.device.detach_kernel_driver(interface_number)
+                except usb.core.USBError as e:
+                    sys.exit(
+                        "Could not detach kernel driver from interface({0}): {1}".format(interface_number,
+                                                                                         str(e)))
