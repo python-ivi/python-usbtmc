@@ -497,7 +497,7 @@ class Instrument(object):
         while not eom:
             if not self.rigol_quirk or read_data == b'':
 
-                # if the rigol sees this again, it will restart the transfer
+                # if the Rigol sees this again, it will restart the transfer
                 # so only send it the first time
 
                 req = self._pack_dev_dep_msg_in_header(read_len, term_char)
@@ -510,32 +510,31 @@ class Instrument(object):
             else:
                 resp = resp.tostring()
             
-            if self.rigol_quirk and read_data:
-                pass # do nothing, the packet has no header if it isn't the first
-            else:
-                msgid, btag, btaginverse, transfer_size, transfer_attributes, data = Instrument._unpack_dev_dep_resp_header(resp)
-
             if self.rigol_quirk:
-                # rigol devices only send the header in the first packet, and they lie about whether the transaction is complete
+                # Rigol devices only send the header in the first packet,
+                # and they lie about whether the transaction is complete
                 if read_data:
                     read_data += resp
                 else:
                     if self.rigol_quirk_ieee_block and data.startswith(b"#"):
 
-                        # ieee block incoming, the transfer_size usbtmc header is lying about the transaction size
+                        # IEEE block incoming, the transfer_size USBTMC header is lying about the transaction size
                         l = int(chr(data[1]))
                         n = int(data[2:l+2])
 
-                        transfer_size = n + (l+2)  # account for ieee header
+                        transfer_size = n + (l+2)  # account for IEEE header
 
                     read_data += data
 
                 if len(read_data) >= transfer_size:
-                    read_data = read_data[:transfer_size]  # as per usbtmc spec section 3.2 note 2
+                    read_data = read_data[:transfer_size]  # as per USBTMC spec section 3.2 note 2
                     eom = True
                 else:
                     eom = False
             else:
+                msgid, btag, btaginverse, transfer_size, transfer_attributes, data =\
+                    Instrument._unpack_dev_dep_resp_header(resp)
+
                 eom = transfer_attributes & 1
                 read_data += data
 
