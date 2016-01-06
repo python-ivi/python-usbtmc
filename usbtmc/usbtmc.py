@@ -127,7 +127,8 @@ def list_devices():
     """
     def is_usbtmc_device(dev):
         for cfg in dev:
-            d = usb.util.find_descriptor(cfg, bInterfaceClass=USBTMC_bInterfaceClass,
+            d = usb.util.find_descriptor(cfg,
+                                         bInterfaceClass=USBTMC_bInterfaceClass,
                                          bInterfaceSubClass=USBTMC_bInterfaceSubClass)
             is_advantest = dev.idVendor == 0x1334
             return d is not None or is_advantest
@@ -733,15 +734,16 @@ class Instrument(object):
 
     def lock(self):
         """
-        Send the lock command to the instrument.
+        Advantest/ADCMT ONLY: Send the lock command to the instrument.
         :return:
         """
         if not self.connected:
             self.open()
 
         if self.advantest_quirk:
-            # This Advantest/ADCMT vendor-specific control command enables remote control and must be sent before any commands are exchanged
-            # (otherwise READ commands will only retrieve the latest measurement)
+            # This Advantest/ADCMT vendor-specific control command enables remote control
+            # and must be sent before any commands are exchanged (otherwise READ commands
+            # will only retrieve the latest measurement).
             self.advantest_locked = True
             self.device.ctrl_transfer(bmRequestType=0xA1,
                                       bRequest=0xA0,
@@ -753,15 +755,16 @@ class Instrument(object):
 
     def unlock(self):
         """
-        Send the unlock command to the instrument.
+        Advantest/ADCMT ONLY: Send the unlock command to the instrument.
         :return:
         """
         if not self.connected:
             self.open()
 
         if self.advantest_quirk:
-            # This Advantest/ADCMT vendor-specific control command enables remote control and must be sent before any commands are exchanged
-            # (otherwise READ commands will only retrieve the latest measurement)
+            # This Advantest/ADCMT vendor-specific control command enables remote control and
+            # must be sent before any commands are exchanged (otherwise READ commands will
+            # only retrieve the latest measurement).
             self.advantest_locked = False
             self.device.ctrl_transfer(bmRequestType=0xA1,
                                       bRequest=0xA0,
@@ -779,7 +782,6 @@ class Instrument(object):
         if not self.connected:
             self.open()
 
-        "Read MyID value from Advantest and ADCMT devices"
         if self.advantest_quirk:
             # This Advantest/ADCMT vendor-specific control command reads the "MyID" identifier
             try:
