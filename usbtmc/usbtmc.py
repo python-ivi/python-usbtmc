@@ -443,47 +443,6 @@ class Instrument(object):
             if b[0] != USBTMC_STATUS_SUCCESS:
                 raise UsbtmcException("Pulse failed", 'pulse')
 
-    # message header management
-    def pack_bulk_out_header(self, msgid):
-        self.last_btag = btag = (self.last_btag % 255) + 1
-        return struct.pack('BBBx', msgid, btag, ~btag & 0xFF)
-
-    def pack_dev_dep_msg_out_header(self, transfer_size, eom=True):
-        hdr = self.pack_bulk_out_header(USBTMC_MSGID_DEV_DEP_MSG_OUT)
-        return hdr+struct.pack("<LBxxx", transfer_size, eom)
-
-    def pack_dev_dep_msg_in_header(self, transfer_size, term_char=None):
-        hdr = self.pack_bulk_out_header(USBTMC_MSGID_DEV_DEP_MSG_IN)
-        transfer_attributes = 0
-        if term_char is None:
-            term_char = 0
-        else:
-            transfer_attributes = 2
-            term_char = self.term_char
-        return hdr+struct.pack("<LBBxx", transfer_size, transfer_attributes, term_char)
-
-    def pack_vendor_specific_out_header(self, transfer_size):
-        hdr = self.pack_bulk_out_header(USBTMC_MSGID_VENDOR_SPECIFIC_OUT)
-        return hdr+struct.pack("<Lxxxx", transfer_size)
-
-    def pack_vendor_specific_in_header(self, transfer_size):
-        hdr = self.pack_bulk_out_header(USBTMC_MSGID_VENDOR_SPECIFIC_IN)
-        return hdr+struct.pack("<Lxxxx", transfer_size)
-
-    def pack_usb488_trigger(self):
-        hdr = self.pack_bulk_out_header(USB488_MSGID_TRIGGER)
-        return hdr+b'\x00'*8
-
-    def unpack_bulk_in_header(self, data):
-        msgid, btag, btaginverse = struct.unpack_from('BBBx', data)
-        return msgid, btag, btaginverse
-
-    def unpack_dev_dep_resp_header(self, data):
-        msgid, btag, btaginverse = self.unpack_bulk_in_header(data)
-        transfer_size, transfer_attributes = struct.unpack_from('<LBxxx', data, 4)
-        data = data[USBTMC_HEADER_SIZE:transfer_size+USBTMC_HEADER_SIZE]
-        return msgid, btag, btaginverse, transfer_size, transfer_attributes, data
-
     def write_raw(self, data):
         """
         Write binary data to instrument.
@@ -506,7 +465,7 @@ class Instrument(object):
             block = data[offset:offset+self.max_transfer_size]
             size = len(block)
 
-            req = self.pack_dev_dep_msg_out_header(size, eom) + block + b'\0'*((4 - (size % 4)) % 4)
+            req = self._pack_dev_dep_msg_out_header(size, eom) + block + b'\0'*((4 - (size % 4)) % 4)
             self.bulk_out_ep.write(req)
 
             offset += size
@@ -540,7 +499,7 @@ class Instrument(object):
                 # if the rigol sees this again, it will restart the transfer
                 # so only send it the first time
 
-                req = self.pack_dev_dep_msg_in_header(read_len, term_char)
+                req = self._pack_dev_dep_msg_in_header(read_len, term_char)
                 self.bulk_out_ep.write(req)
             
             resp = self.bulk_in_ep.read(read_len+USBTMC_HEADER_SIZE+3, timeout=int(self.timeout*1000))
@@ -553,7 +512,7 @@ class Instrument(object):
             if self.rigol_quirk and read_data:
                 pass # do nothing, the packet has no header if it isn't the first
             else:
-                msgid, btag, btaginverse, transfer_size, transfer_attributes, data = self.unpack_dev_dep_resp_header(resp)
+                msgid, btag, btaginverse, transfer_size, transfer_attributes, data = Instrument._unpack_dev_dep_resp_header(resp)
 
             if self.rigol_quirk:
                 # rigol devices only send the header in the first packet, and they lie about whether the transaction is complete
@@ -712,7 +671,7 @@ class Instrument(object):
             self.open()
 
         if self.support_trigger:
-            data = self.pack_usb488_trigger()
+            data = self._pack_usb488_trigger()
             print(repr(data))
             self.bulk_out_ep.write(data)
         else:
@@ -844,3 +803,46 @@ class Instrument(object):
                     sys.exit(
                         "Could not detach kernel driver from interface({0}): {1}".format(interface_number,
                                                                                          str(e)))
+
+    # Message header management
+    def _pack_bulk_out_header(self, msgid):
+        self.last_btag = btag = (self.last_btag % 255) + 1
+        return struct.pack('BBBx', msgid, btag, ~btag & 0xFF)
+
+    def _pack_dev_dep_msg_out_header(self, transfer_size, eom=True):
+        hdr = self._pack_bulk_out_header(USBTMC_MSGID_DEV_DEP_MSG_OUT)
+        return hdr+struct.pack("<LBxxx", transfer_size, eom)
+
+    def _pack_dev_dep_msg_in_header(self, transfer_size, term_char=None):
+        hdr = self._pack_bulk_out_header(USBTMC_MSGID_DEV_DEP_MSG_IN)
+        transfer_attributes = 0
+        if term_char is None:
+            term_char = 0
+        else:
+            transfer_attributes = 2
+            term_char = self.term_char
+        return hdr+struct.pack("<LBBxx", transfer_size, transfer_attributes, term_char)
+
+    def _pack_vendor_specific_out_header(self, transfer_size):
+        hdr = self._pack_bulk_out_header(USBTMC_MSGID_VENDOR_SPECIFIC_OUT)
+        return hdr+struct.pack("<Lxxxx", transfer_size)
+
+    def _pack_vendor_specific_in_header(self, transfer_size):
+        hdr = self._pack_bulk_out_header(USBTMC_MSGID_VENDOR_SPECIFIC_IN)
+        return hdr+struct.pack("<Lxxxx", transfer_size)
+
+    def _pack_usb488_trigger(self):
+        hdr = self._pack_bulk_out_header(USB488_MSGID_TRIGGER)
+        return hdr+b'\x00'*8
+
+    @staticmethod
+    def _unpack_dev_dep_resp_header(data):
+        msgid, btag, btaginverse = Instrument._unpack_bulk_in_header(data)
+        transfer_size, transfer_attributes = struct.unpack_from('<LBxxx', data, 4)
+        data = data[USBTMC_HEADER_SIZE:transfer_size+USBTMC_HEADER_SIZE]
+        return msgid, btag, btaginverse, transfer_size, transfer_attributes, data
+
+    @staticmethod
+    def _unpack_bulk_in_header(data):
+        msgid, btag, btaginverse = struct.unpack_from('BBBx', data)
+        return msgid, btag, btaginverse
