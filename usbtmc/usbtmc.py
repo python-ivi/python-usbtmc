@@ -509,7 +509,12 @@ class Instrument(object):
                 resp = resp.tobytes()
             else:
                 resp = resp.tostring()
-            
+
+            if self.rigol_quirk and read_data:
+                # Do nothing as the Rigol device has lied about the transaction being completed.
+                # So, on subsequent packets there is no header in the packet.
+                pass
+
             if self.rigol_quirk:
                 # Rigol devices only send the header in the first packet,
                 # and they lie about whether the transaction is complete
@@ -517,7 +522,6 @@ class Instrument(object):
                     read_data += resp
                 else:
                     if self.rigol_quirk_ieee_block and data.startswith(b"#"):
-
                         # IEEE block incoming, the transfer_size USBTMC header is lying about the transaction size
                         l = int(chr(data[1]))
                         n = int(data[2:l+2])
