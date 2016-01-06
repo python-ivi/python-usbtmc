@@ -510,10 +510,15 @@ class Instrument(object):
             else:
                 resp = resp.tostring()
 
+            transfer_attributes = 0
+
             if self.rigol_quirk and read_data:
                 # Do nothing as the Rigol device has lied about the transaction being completed.
                 # So, on subsequent packets there is no header in the packet.
                 pass
+            else:
+                msgid, btag, btaginverse, transfer_size, transfer_attributes, data =\
+                    Instrument._unpack_dev_dep_resp_header(resp)
 
             if self.rigol_quirk:
                 # Rigol devices only send the header in the first packet,
@@ -536,9 +541,6 @@ class Instrument(object):
                 else:
                     eom = False
             else:
-                msgid, btag, btaginverse, transfer_size, transfer_attributes, data =\
-                    Instrument._unpack_dev_dep_resp_header(resp)
-
                 eom = transfer_attributes & 1
                 read_data += data
 
