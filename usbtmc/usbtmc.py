@@ -70,6 +70,8 @@ USB488_LOCAL_LOCKOUT    = 162
 
 USBTMC_HEADER_SIZE = 12
 
+RIGOL_QUIRK_PIDS = [0x04ce, 0x0588]
+
 
 def parse_visa_resource_string(resource_string):
     # valid resource strings:
@@ -173,6 +175,8 @@ class Instrument(object):
         self.term_char = None
         self.advantest_quirk = False
         self.advantest_locked = False
+        self.rigol_quirk = False
+        self.rigol_quirk_ieee_block = False
 
         self.bcdUSBTMC = 0
         self.support_pulse = False
@@ -325,6 +329,12 @@ class Instrument(object):
             # which requires max 63 byte reads and never signals EOI on read
             self.max_transfer_size = 63
             self.advantest_quirk = True
+
+        if self.device.idVendor == 0x1ab1 and self.device.idProduct in RIGOL_QUIRK_PIDS:
+            self.rigol_quirk = True
+
+            if self.device.idProduct == 0x04ce:
+                self.rigol_quirk_ieee_block = True
 
         self.connected = True
 
@@ -495,21 +505,50 @@ class Instrument(object):
         read_data = b''
 
         while not eom:
-            req = self.pack_dev_dep_msg_in_header(read_len, term_char)
-            self.bulk_out_ep.write(req)
+            if not self.rigol_quirk or read_data == b'':
 
+                # if the rigol sees this again, it will restart the transfer
+                # so only send it the first time
+
+                req = self.pack_dev_dep_msg_in_header(read_len, term_char)
+                self.bulk_out_ep.write(req)
+            
             resp = self.bulk_in_ep.read(read_len+USBTMC_HEADER_SIZE+3, timeout = int(self.timeout*1000))
 
             if sys.version_info >= (3, 0):
                 resp = resp.tobytes()
             else:
                 resp = resp.tostring()
+            
+            if self.rigol_quirk and read_data:
+                pass # do nothing, the packet has no header if it isn't the first
+            else:
+                msgid, btag, btaginverse, transfer_size, transfer_attributes, data = self.unpack_dev_dep_resp_header(resp) 
 
-            msgid, btag, btaginverse, transfer_size, transfer_attributes, data = self.unpack_dev_dep_resp_header(resp)
 
-            eom = transfer_attributes & 1
+            if self.rigol_quirk:
+                # rigol devices only send the header in the first packet, and they lie about whether the transaction is complete
+                if read_data:
+                    read_data += resp
+                else:
+                    if self.rigol_quirk_ieee_block and data.startswith(b"#"):
 
-            read_data += data
+                        # ieee block incoming, the transfer_size usbtmc header is lying about the transaction size
+                        l = int(chr(data[1]))
+                        n = int(data[2:l+2])
+
+                        transfer_size = n + (l+2)  # account for ieee header
+
+                    read_data += data
+
+                if len(read_data) >= transfer_size:
+                    read_data = read_data[:transfer_size]  # as per usbtmc spec section 3.2 note 2
+                    eom = True
+                else:
+                    eom = False
+            else:
+                eom = transfer_attributes & 1
+                read_data += data
 
             # Advantest devices never signal EOI and may only send one read packet
             if self.advantest_quirk:
