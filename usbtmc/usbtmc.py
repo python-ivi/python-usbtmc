@@ -140,7 +140,7 @@ def find_device(idVendor=None, idProduct=None, iSerial=None):
     Find USBTMC instrument.
     :param idVendor: vendor ID
     :param idProduct: product ID
-    :param serial_number: instrument serial number
+    :param iSerial: instrument serial number
     :return: instrument matching criteria
     """
 
@@ -153,7 +153,7 @@ def find_device(idVendor=None, idProduct=None, iSerial=None):
         if device.idVendor != idVendor or device.idProduct != idProduct:
             continue
 
-        if serial_number is None:
+        if iSerial is None:
             return device
         else:
             s = ''
