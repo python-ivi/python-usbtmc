@@ -10,4 +10,6 @@ python:
 
 install:
   - pip install -r requirements.txt
-  - pip install .
+
+script:
+  - python setup.py install
