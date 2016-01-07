@@ -116,6 +116,8 @@ class UsbtmcException(Exception):
             if note is not None:
                 self.msg = "%s [%s]" % (self.msg, note)
 
+        super(UsbtmcException, self).__init__(self.msg)
+
     def __str__(self):
         return self.msg
 
@@ -395,14 +397,14 @@ class Instrument(object):
             self.open()
 
         b = self.device.ctrl_transfer(
-              usb.util.build_request_type(usb.util.CTRL_IN,
-                                          usb.util.CTRL_TYPE_CLASS,
-                                          usb.util.CTRL_RECIPIENT_INTERFACE),
-              USBTMC_REQUEST_GET_CAPABILITIES,
-              0x0000,
-              self.iface.index,
-              0x0018,
-              timeout=int(self.timeout*1000))
+            usb.util.build_request_type(usb.util.CTRL_IN,
+                                        usb.util.CTRL_TYPE_CLASS,
+                                        usb.util.CTRL_RECIPIENT_INTERFACE),
+            USBTMC_REQUEST_GET_CAPABILITIES,
+            0x0000,
+            self.iface.index,
+            0x0018,
+            timeout=int(self.timeout*1000))
         if b[0] == USBTMC_STATUS_SUCCESS:
             self.bcdUSBTMC = (b[3] << 8) + b[2]
             self.support_pulse = b[4] & 4 != 0
@@ -433,14 +435,14 @@ class Instrument(object):
 
         if self.support_pulse:
             b = self.device.ctrl_transfer(
-                  usb.util.build_request_type(usb.util.CTRL_IN,
-                                              usb.util.CTRL_TYPE_CLASS,
-                                              usb.util.CTRL_RECIPIENT_INTERFACE),
-                  USBTMC_REQUEST_INDICATOR_PULSE,
-                  0x0000,
-                  self.iface.index,
-                  0x0001,
-                  timeout=int(self.timeout*1000))
+                usb.util.build_request_type(usb.util.CTRL_IN,
+                                            usb.util.CTRL_TYPE_CLASS,
+                                            usb.util.CTRL_RECIPIENT_INTERFACE),
+                USBTMC_REQUEST_INDICATOR_PULSE,
+                0x0000,
+                self.iface.index,
+                0x0001,
+                timeout=int(self.timeout*1000))
             if b[0] != USBTMC_STATUS_SUCCESS:
                 raise UsbtmcException("Pulse failed", 'pulse')
 
@@ -502,7 +504,7 @@ class Instrument(object):
 
                 req = self._pack_dev_dep_msg_in_header(read_len, term_char)
                 self.bulk_out_ep.write(req)
-            
+
             resp = self.bulk_in_ep.read(read_len+USBTMC_HEADER_SIZE+3, timeout=int(self.timeout*1000))
 
             if sys.version_info >= (3, 0):
@@ -597,7 +599,6 @@ class Instrument(object):
         :param encoding: string encoding
         :return: data read
         """
-        "Read string from instrument"
         return self.read_raw(num).decode(encoding).rstrip('\r\n')
 
     def ask(self, message, num=-1, encoding='utf-8'):
@@ -641,14 +642,14 @@ class Instrument(object):
             self.last_rstb_btag = rstb_btag
 
             b = self.device.ctrl_transfer(
-                  usb.util.build_request_type(usb.util.CTRL_IN,
-                                              usb.util.CTRL_TYPE_CLASS,
-                                              usb.util.CTRL_RECIPIENT_INTERFACE),
-                  USB488_READ_STATUS_BYTE,
-                  rstb_btag,
-                  self.iface.index,
-                  0x0003,
-                  timeout=int(self.timeout*1000))
+                usb.util.build_request_type(usb.util.CTRL_IN,
+                                            usb.util.CTRL_TYPE_CLASS,
+                                            usb.util.CTRL_RECIPIENT_INTERFACE),
+                USB488_READ_STATUS_BYTE,
+                rstb_btag,
+                self.iface.index,
+                0x0003,
+                timeout=int(self.timeout*1000))
             if b[0] == USBTMC_STATUS_SUCCESS:
                 # check btag
                 if rstb_btag != b[1]:
@@ -678,7 +679,6 @@ class Instrument(object):
 
         if self.support_trigger:
             data = self._pack_usb488_trigger()
-            print(repr(data))
             self.bulk_out_ep.write(data)
         else:
             self.write("*TRG")
@@ -693,27 +693,27 @@ class Instrument(object):
 
         # Send INITIATE_CLEAR
         b = self.device.ctrl_transfer(
-              usb.util.build_request_type(usb.util.CTRL_IN,
-                                          usb.util.CTRL_TYPE_CLASS,
-                                          usb.util.CTRL_RECIPIENT_INTERFACE),
-              USBTMC_REQUEST_INITIATE_CLEAR,
-              0x0000,
-              self.iface.index,
-              0x0001,
-              timeout=int(self.timeout*1000))
+            usb.util.build_request_type(usb.util.CTRL_IN,
+                                        usb.util.CTRL_TYPE_CLASS,
+                                        usb.util.CTRL_RECIPIENT_INTERFACE),
+            USBTMC_REQUEST_INITIATE_CLEAR,
+            0x0000,
+            self.iface.index,
+            0x0001,
+            timeout=int(self.timeout*1000))
         if b[0] == USBTMC_STATUS_SUCCESS:
             # Initiate clear succeeded, wait for completion
             while True:
                 # Check status
                 b = self.device.ctrl_transfer(
-                      usb.util.build_request_type(usb.util.CTRL_IN,
-                                                  usb.util.CTRL_TYPE_CLASS,
-                                                  usb.util.CTRL_RECIPIENT_INTERFACE),
-                      USBTMC_REQUEST_CHECK_CLEAR_STATUS,
-                      0x0000,
-                      self.iface.index,
-                      0x0002,
-                      timeout=int(self.timeout*1000))
+                    usb.util.build_request_type(usb.util.CTRL_IN,
+                                                usb.util.CTRL_TYPE_CLASS,
+                                                usb.util.CTRL_RECIPIENT_INTERFACE),
+                    USBTMC_REQUEST_CHECK_CLEAR_STATUS,
+                    0x0000,
+                    self.iface.index,
+                    0x0002,
+                    timeout=int(self.timeout*1000))
                 if b[0] == USBTMC_STATUS_PENDING:
                     time.sleep(0.1)
                 else:
