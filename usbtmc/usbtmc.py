@@ -480,7 +480,7 @@ class Instrument(object):
             size = len(block)
 
             req = self.pack_dev_dep_msg_out_header(size, eom) + block + b'\0'*((4 - (size % 4)) % 4)
-            self.bulk_out_ep.write(req)
+            self.bulk_out_ep.write(req, timeout = int(self.timeout*1000))
 
             offset += size
             num -= size
@@ -511,7 +511,7 @@ class Instrument(object):
                 # so only send it the first time
 
                 req = self.pack_dev_dep_msg_in_header(read_len, term_char)
-                self.bulk_out_ep.write(req)
+                self.bulk_out_ep.write(req, timeout = int(self.timeout*1000))
             
             resp = self.bulk_in_ep.read(read_len+USBTMC_HEADER_SIZE+3, timeout = int(self.timeout*1000))
 
@@ -657,7 +657,7 @@ class Instrument(object):
         if self.support_trigger:
             data = self.pack_usb488_trigger()
             print(repr(data))
-            self.bulk_out_ep.write(data)
+            self.bulk_out_ep.write(data, timeout = int(self.timeout*1000))
         else:
             self.write("*TRG")
 
