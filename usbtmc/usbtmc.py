@@ -79,8 +79,11 @@ def parse_visa_resource_string(resource_string):
     # USB::1234::5678::SERIAL::INSTR
     # USB0::0x1234::0x5678::INSTR
     # USB0::0x1234::0x5678::SERIAL::INSTR
+    # USB::1234::4536::SERIAL::0::INSTR
+    # USB0::0x1234::0x4536::SERIAL::0::INSTR
+    
     m = re.match('^(?P<prefix>(?P<type>USB)\d*)(::(?P<arg1>[^\s:]+))'
-        '(::(?P<arg2>[^\s:]+(\[.+\])?))(::(?P<arg3>[^\s:]+))?'
+        '(::(?P<arg2>[^\s:]+(\[.+\])?))(::(?P<arg3>[^\s:]+))?(::(?P<arg4>[^\s:]+))?'
         '(::(?P<suffix>INSTR))$', resource_string, re.I)
 
     if m is not None:
@@ -90,6 +93,7 @@ def parse_visa_resource_string(resource_string):
             arg1=m.group('arg1'),
             arg2=m.group('arg2'),
             arg3=m.group('arg3'),
+            arg4=m.group('arg4'),
             suffix=m.group('suffix')
         )
 
