@@ -287,9 +287,13 @@ class Instrument(object):
         if self.iface is None:
             raise UsbtmcException("Not a USBTMC device", 'init')
 
-        self.old_cfg = self.device.get_active_configuration()
+        try:
+            self.old_cfg = self.device.get_active_configuration()
+        except usb.core.USBError:
+            # ignore exception if configuration is not set
+            pass
 
-        if self.old_cfg.bConfigurationValue == self.cfg.bConfigurationValue:
+        if self.old_cfg is not None and self.old_cfg.bConfigurationValue == self.cfg.bConfigurationValue:
             # already set to correct configuration
 
             # release kernel driver on USBTMC interface
