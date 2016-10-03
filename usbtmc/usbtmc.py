@@ -304,6 +304,9 @@ class Instrument(object):
             # set proper configuration
             self.device.set_configuration(self.cfg)
 
+        # claim interface
+        usb.util.claim_interface(self.device, self.iface)
+
         # don't need to set altsetting - USBTMC devices have 1 altsetting as per the spec
 
         # find endpoints
