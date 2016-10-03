@@ -299,11 +299,12 @@ class Instrument(object):
             # release kernel driver on USBTMC interface
             self._release_kernel_driver(self.iface.bInterfaceNumber)
         else:
-            # wrong configuration
+            # wrong configuration or configuration not set
 
             # release all kernel drivers
-            for iface in self.old_cfg:
-                self._release_kernel_driver(iface.bInterfaceNumber)
+            if self.old_cfg is not None:
+                for iface in self.old_cfg:
+                    self._release_kernel_driver(iface.bInterfaceNumber)
 
             # set proper configuration
             self.device.set_configuration(self.cfg)
