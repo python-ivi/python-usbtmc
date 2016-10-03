@@ -522,11 +522,11 @@ class Instrument(object):
             
             resp = self.bulk_in_ep.read(read_len+USBTMC_HEADER_SIZE+3, timeout = int(self.timeout*1000))
 
-            if sys.version_info >= (3, 0):
+            if sys.version_info >= (3, 2):
                 resp = resp.tobytes()
             else:
                 resp = resp.tostring()
-            
+
             if self.rigol_quirk and read_data:
                 pass # do nothing, the packet has no header if it isn't the first
             else:
