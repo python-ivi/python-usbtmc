@@ -195,7 +195,7 @@ class Instrument(object):
 
         self.max_transfer_size = 1024*1024
 
-        self.timeout = 1.0
+        self.timeout = 5.0
 
         self.bulk_in_ep = None
         self.bulk_out_ep = None
