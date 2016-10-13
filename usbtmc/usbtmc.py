@@ -480,18 +480,25 @@ class Instrument(object):
 
         offset = 0
 
-        while num > 0:
-            if num <= self.max_transfer_size:
-                eom = True
+        try:
+            while num > 0:
+                if num <= self.max_transfer_size:
+                    eom = True
 
-            block = data[offset:offset+self.max_transfer_size]
-            size = len(block)
+                block = data[offset:offset+self.max_transfer_size]
+                size = len(block)
 
-            req = self.pack_dev_dep_msg_out_header(size, eom) + block + b'\0'*((4 - (size % 4)) % 4)
-            self.bulk_out_ep.write(req, timeout=int(self.timeout*1000))
+                req = self.pack_dev_dep_msg_out_header(size, eom) + block + b'\0'*((4 - (size % 4)) % 4)
+                self.bulk_out_ep.write(req, timeout=int(self.timeout*1000))
 
-            offset += size
-            num -= size
+                offset += size
+                num -= size
+        except usb.core.USBError:
+            exc = sys.exc_info()[1]
+            if exc.errno == 110:
+                # timeout, abort transfer
+                self._abort_bulk_out()
+            raise
 
     def read_raw(self, num=-1):
         "Read binary data from instrument"
@@ -512,62 +519,69 @@ class Instrument(object):
 
         read_data = b''
 
-        while not eom:
-            if not self.rigol_quirk or read_data == b'':
+        try:
+            while not eom:
+                if not self.rigol_quirk or read_data == b'':
 
-                # if the rigol sees this again, it will restart the transfer
-                # so only send it the first time
+                    # if the rigol sees this again, it will restart the transfer
+                    # so only send it the first time
 
-                req = self.pack_dev_dep_msg_in_header(read_len, term_char)
-                self.bulk_out_ep.write(req, timeout=int(self.timeout*1000))
-            
-            resp = self.bulk_in_ep.read(read_len+USBTMC_HEADER_SIZE+3, timeout = int(self.timeout*1000))
+                    req = self.pack_dev_dep_msg_in_header(read_len, term_char)
+                    self.bulk_out_ep.write(req, timeout=int(self.timeout*1000))
 
-            if sys.version_info >= (3, 2):
-                resp = resp.tobytes()
-            else:
-                resp = resp.tostring()
+                resp = self.bulk_in_ep.read(read_len+USBTMC_HEADER_SIZE+3, timeout=int(self.timeout*1000))
 
-            if self.rigol_quirk and read_data:
-                pass # do nothing, the packet has no header if it isn't the first
-            else:
-                msgid, btag, btaginverse, transfer_size, transfer_attributes, data = self.unpack_dev_dep_resp_header(resp) 
-
-
-            if self.rigol_quirk:
-                # rigol devices only send the header in the first packet, and they lie about whether the transaction is complete
-                if read_data:
-                    read_data += resp
+                if sys.version_info >= (3, 2):
+                    resp = resp.tobytes()
                 else:
-                    if self.rigol_quirk_ieee_block and data.startswith(b"#"):
+                    resp = resp.tostring()
 
-                        # ieee block incoming, the transfer_size usbtmc header is lying about the transaction size
-                        l = int(chr(data[1]))
-                        n = int(data[2:l+2])
+                if self.rigol_quirk and read_data:
+                    pass # do nothing, the packet has no header if it isn't the first
+                else:
+                    msgid, btag, btaginverse, transfer_size, transfer_attributes, data = self.unpack_dev_dep_resp_header(resp) 
 
-                        transfer_size = n + (l+2)  # account for ieee header
 
+                if self.rigol_quirk:
+                    # rigol devices only send the header in the first packet, and they lie about whether the transaction is complete
+                    if read_data:
+                        read_data += resp
+                    else:
+                        if self.rigol_quirk_ieee_block and data.startswith(b"#"):
+
+                            # ieee block incoming, the transfer_size usbtmc header is lying about the transaction size
+                            l = int(chr(data[1]))
+                            n = int(data[2:l+2])
+
+                            transfer_size = n + (l+2)  # account for ieee header
+
+                        read_data += data
+
+                    if len(read_data) >= transfer_size:
+                        read_data = read_data[:transfer_size]  # as per usbtmc spec section 3.2 note 2
+                        eom = True
+                    else:
+                        eom = False
+                else:
+                    eom = transfer_attributes & 1
                     read_data += data
 
-                if len(read_data) >= transfer_size:
-                    read_data = read_data[:transfer_size]  # as per usbtmc spec section 3.2 note 2
-                    eom = True
-                else:
-                    eom = False
-            else:
-                eom = transfer_attributes & 1
-                read_data += data
-
-            # Advantest devices never signal EOI and may only send one read packet
-            if self.advantest_quirk:
-                break
-
-            if num > 0:
-                num = num - len(data)
-                if num <= 0:
+                # Advantest devices never signal EOI and may only send one read packet
+                if self.advantest_quirk:
                     break
-                if num < read_len:
-                    read_len = num
+
+                if num > 0:
+                    num = num - len(data)
+                    if num <= 0:
+                        break
+                    if num < read_len:
+                        read_len = num
+        except usb.core.USBError:
+            exc = sys.exc_info()[1]
+            if exc.errno == 110:
+                # timeout, abort transfer
+                self._abort_bulk_in()
+            raise
 
         return read_data
 
@@ -702,6 +716,78 @@ class Instrument(object):
             self.bulk_out_ep.clear_halt()
         else:
             raise UsbtmcException("Clear failed", 'clear')
+
+    def _abort_bulk_out(self, btag=None):
+        "Abort bulk out"
+
+        if not self.connected:
+            return
+
+        if btag is None:
+            btag = self.last_btag
+
+        # Send INITIATE_ABORT_BULK_OUT
+        b = self.device.ctrl_transfer(
+              usb.util.build_request_type(usb.util.CTRL_IN, usb.util.CTRL_TYPE_CLASS, usb.util.CTRL_RECIPIENT_ENDPOINT),
+              USBTMC_REQUEST_INITIATE_ABORT_BULK_OUT,
+              btag,
+              self.bulk_out_ep.bEndpointAddress,
+              0x0002,
+              timeout=int(self.timeout*1000))
+        if (b[0] == USBTMC_STATUS_SUCCESS):
+            # Initiate abort bulk out succeeded, wait for completion
+            while True:
+                # Check status
+                b = self.device.ctrl_transfer(
+                      usb.util.build_request_type(usb.util.CTRL_IN, usb.util.CTRL_TYPE_CLASS, usb.util.CTRL_RECIPIENT_ENDPOINT),
+                      USBTMC_REQUEST_CHECK_ABORT_BULK_OUT_STATUS,
+                      0x0000,
+                      self.bulk_out_ep.bEndpointAddress,
+                      0x0008,
+                      timeout=int(self.timeout*1000))
+                if (b[0] == USBTMC_STATUS_PENDING):
+                    time.sleep(0.1)
+                else:
+                    break
+        else:
+            # no transfer in progress; nothing to do
+            pass
+
+    def _abort_bulk_in(self, btag=None):
+        "Abort bulk in"
+
+        if not self.connected:
+            return
+
+        if btag is None:
+            btag = self.last_btag
+
+        # Send INITIATE_ABORT_BULK_IN
+        b = self.device.ctrl_transfer(
+              usb.util.build_request_type(usb.util.CTRL_IN, usb.util.CTRL_TYPE_CLASS, usb.util.CTRL_RECIPIENT_ENDPOINT),
+              USBTMC_REQUEST_INITIATE_ABORT_BULK_IN,
+              btag,
+              self.bulk_in_ep.bEndpointAddress,
+              0x0002,
+              timeout=int(self.timeout*1000))
+        if (b[0] == USBTMC_STATUS_SUCCESS):
+            # Initiate abort bulk in succeeded, wait for completion
+            while True:
+                # Check status
+                b = self.device.ctrl_transfer(
+                      usb.util.build_request_type(usb.util.CTRL_IN, usb.util.CTRL_TYPE_CLASS, usb.util.CTRL_RECIPIENT_ENDPOINT),
+                      USBTMC_REQUEST_CHECK_ABORT_BULK_IN_STATUS,
+                      0x0000,
+                      self.bulk_in_ep.bEndpointAddress,
+                      0x0008,
+                      timeout=int(self.timeout*1000))
+                if (b[0] == USBTMC_STATUS_PENDING):
+                    time.sleep(0.1)
+                else:
+                    break
+        else:
+            # no transfer in progress; nothing to do
+            pass
 
     def remote(self):
         "Send remote command"
