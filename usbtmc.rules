@@ -1,0 +1,29 @@
+# USBTMC instruments
+
+# Agilent MSO7104A
+SUBSYSTEM=="usb", ACTION=="add", ATTRS{idVendor}=="0957", ATTRS{idProduct}=="1755", GROUP="usbtmc", MODE="0660"
+
+# Agilent MSO7104B
+SUBSYSTEM=="usb", ACTION=="add", ATTRS{idVendor}=="0957", ATTRS{idProduct}=="175d", GROUP="usbtmc", MODE="0660"
+
+# Agilent MSO-X 3014A
+SUBSYSTEM=="usb", ACTION=="add", ATTRS{idVendor}=="0957", ATTRS{idProduct}=="17a8", GROUP="usbtmc", MODE="0660"
+
+# Agilent DSA-X 96204Q
+SUBSYSTEM=="usb", ACTION=="add", ATTRS{idVendor}=="0957", ATTRS{idProduct}=="903c", GROUP="usbtmc", MODE="0660"
+
+# Agilent U2001A
+SUBSYSTEM=="usb", ACTION=="add", ATTRS{idVendor}=="0957", ATTRS{idProduct}=="2b18", GROUP="usbtmc", MODE="0660"
+
+# Agilent U2002A
+SUBSYSTEM=="usb", ACTION=="add", ATTRS{idVendor}=="0957", ATTRS{idProduct}=="2c18", GROUP="usbtmc", MODE="0660"
+
+# Agilent B2962A
+SUBSYSTEM=="usb", ACTION=="add", ATTRS{idVendor}=="0957", ATTRS{idProduct}=="9018", GROUP="usbtmc", MODE="0660"
+
+# Tektronix MDO4104
+SUBSYSTEM=="usb", ACTION=="add", ATTRS{idVendor}=="0699", ATTRS{idProduct}=="040c", GROUP="usbtmc", MODE="0660"
+
+# Kernel devices
+KERNEL=="usbtmc/*",       MODE="0660", GROUP="usbtmc"
+KERNEL=="usbtmc[0-9]*",   MODE="0660", GROUP="usbtmc"
