@@ -26,5 +26,5 @@ THE SOFTWARE.
 
 __all__ = ["usbtmc"]
 
-from .usbtmc import Instrument
-from .usbtmc import list_devices
+from .version import __version__
+from .usbtmc import Instrument, list_devices
