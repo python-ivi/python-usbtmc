@@ -265,6 +265,15 @@ class Instrument(object):
         if self.connected:
             self.close()
 
+    @property
+    def timeout(self):
+        return self._timeout
+
+    @timeout.setter
+    def timeout(self, val):
+        self._timeout = val
+        self._timeout_ms = int(val * 1000)
+
     def open(self):
         if self.connected:
             return
@@ -388,7 +397,7 @@ class Instrument(object):
               0x0000,
               self.iface.index,
               0x0018,
-              timeout=int(self.timeout*1000))
+              timeout=self._timeout_ms)
         if (b[0] == USBTMC_STATUS_SUCCESS):
             self.bcdUSBTMC = (b[3] << 8) + b[2]
             self.support_pulse = b[4] & 4 != 0
@@ -423,7 +432,7 @@ class Instrument(object):
                   0x0000,
                   self.iface.index,
                   0x0001,
-                  timeout=int(self.timeout*1000))
+                  timeout=self._timeout_ms)
             if (b[0] != USBTMC_STATUS_SUCCESS):
                 raise UsbtmcException("Pulse failed", 'pulse')
 
@@ -489,7 +498,7 @@ class Instrument(object):
                 size = len(block)
 
                 req = self.pack_dev_dep_msg_out_header(size, eom) + block + b'\0'*((4 - (size % 4)) % 4)
-                self.bulk_out_ep.write(req, timeout=int(self.timeout*1000))
+                self.bulk_out_ep.write(req, timeout=self._timeout_ms)
 
                 offset += size
                 num -= size
@@ -527,9 +536,9 @@ class Instrument(object):
                     # so only send it the first time
 
                     req = self.pack_dev_dep_msg_in_header(read_len, term_char)
-                    self.bulk_out_ep.write(req, timeout=int(self.timeout*1000))
+                    self.bulk_out_ep.write(req, timeout=self._timeout_ms)
 
-                resp = self.bulk_in_ep.read(read_len+USBTMC_HEADER_SIZE+3, timeout=int(self.timeout*1000))
+                resp = self.bulk_in_ep.read(read_len+USBTMC_HEADER_SIZE+3, timeout=self._timeout_ms)
 
                 if sys.version_info >= (3, 2):
                     resp = resp.tobytes()
@@ -650,7 +659,7 @@ class Instrument(object):
                   rstb_btag,
                   self.iface.index,
                   0x0003,
-                  timeout=int(self.timeout*1000))
+                  timeout=self._timeout_ms)
             if (b[0] == USBTMC_STATUS_SUCCESS):
                 # check btag
                 if rstb_btag != b[1]:
@@ -660,7 +669,7 @@ class Instrument(object):
                     return b[2]
                 else:
                     # read response from interrupt channel
-                    resp = self.interrupt_in_ep.read(2, timeout=int(self.timeout*1000))
+                    resp = self.interrupt_in_ep.read(2, timeout=self._timeout_ms)
                     if resp[0] != rstb_btag + 128:
                         raise UsbtmcException("Read status byte btag mismatch", 'read_stb')
                     else:
@@ -679,7 +688,7 @@ class Instrument(object):
         if self.support_trigger:
             data = self.pack_usb488_trigger()
             print(repr(data))
-            self.bulk_out_ep.write(data, timeout=int(self.timeout*1000))
+            self.bulk_out_ep.write(data, timeout=self._timeout_ms)
         else:
             self.write("*TRG")
 
@@ -696,7 +705,7 @@ class Instrument(object):
               0x0000,
               self.iface.index,
               0x0001,
-              timeout=int(self.timeout*1000))
+              timeout=self._timeout_ms)
         if (b[0] == USBTMC_STATUS_SUCCESS):
             # Initiate clear succeeded, wait for completion
             while True:
@@ -707,7 +716,7 @@ class Instrument(object):
                       0x0000,
                       self.iface.index,
                       0x0002,
-                      timeout=int(self.timeout*1000))
+                      timeout=self._timeout_ms)
                 if (b[0] == USBTMC_STATUS_PENDING):
                     time.sleep(0.1)
                 else:
@@ -733,7 +742,7 @@ class Instrument(object):
               btag,
               self.bulk_out_ep.bEndpointAddress,
               0x0002,
-              timeout=int(self.timeout*1000))
+              timeout=self._timeout_ms)
         if (b[0] == USBTMC_STATUS_SUCCESS):
             # Initiate abort bulk out succeeded, wait for completion
             while True:
@@ -744,7 +753,7 @@ class Instrument(object):
                       0x0000,
                       self.bulk_out_ep.bEndpointAddress,
                       0x0008,
-                      timeout=int(self.timeout*1000))
+                      timeout=self._timeout_ms)
                 if (b[0] == USBTMC_STATUS_PENDING):
                     time.sleep(0.1)
                 else:
@@ -769,7 +778,7 @@ class Instrument(object):
               btag,
               self.bulk_in_ep.bEndpointAddress,
               0x0002,
-              timeout=int(self.timeout*1000))
+              timeout=self._timeout_ms)
         if (b[0] == USBTMC_STATUS_SUCCESS):
             # Initiate abort bulk in succeeded, wait for completion
             while True:
@@ -780,7 +789,7 @@ class Instrument(object):
                       0x0000,
                       self.bulk_in_ep.bEndpointAddress,
                       0x0008,
-                      timeout=int(self.timeout*1000))
+                      timeout=self._timeout_ms)
                 if (b[0] == USBTMC_STATUS_PENDING):
                     time.sleep(0.1)
                 else:
