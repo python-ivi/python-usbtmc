@@ -654,12 +654,13 @@ class Instrument(object):
             self.last_rstb_btag = rstb_btag
 
             b = self.device.ctrl_transfer(
-                  usb.util.build_request_type(usb.util.CTRL_IN, usb.util.CTRL_TYPE_CLASS, usb.util.CTRL_RECIPIENT_INTERFACE),
-                  USB488_READ_STATUS_BYTE,
-                  rstb_btag,
-                  self.iface.index,
-                  0x0003,
-                  timeout=self._timeout_ms)
+                bmRequestType=usb.util.build_request_type(usb.util.CTRL_IN, usb.util.CTRL_TYPE_CLASS, usb.util.CTRL_RECIPIENT_INTERFACE),
+                bRequest=USB488_READ_STATUS_BYTE,
+                wValue=rstb_btag,
+                wIndex=self.iface.index,
+                data_or_wLength=0x0003,
+                timeout=self._timeout_ms
+            )
             if (b[0] == USBTMC_STATUS_SUCCESS):
                 # check btag
                 if rstb_btag != b[1]:
@@ -700,23 +701,25 @@ class Instrument(object):
 
         # Send INITIATE_CLEAR
         b = self.device.ctrl_transfer(
-              usb.util.build_request_type(usb.util.CTRL_IN, usb.util.CTRL_TYPE_CLASS, usb.util.CTRL_RECIPIENT_INTERFACE),
-              USBTMC_REQUEST_INITIATE_CLEAR,
-              0x0000,
-              self.iface.index,
-              0x0001,
-              timeout=self._timeout_ms)
+            bmRequestType=usb.util.build_request_type(usb.util.CTRL_IN, usb.util.CTRL_TYPE_CLASS, usb.util.CTRL_RECIPIENT_INTERFACE),
+            bRequest=USBTMC_REQUEST_INITIATE_CLEAR,
+            wValue=0x0000,
+            wIndex=self.iface.index,
+            data_or_wLength=0x0001,
+            timeout=self._timeout_ms
+        )
         if (b[0] == USBTMC_STATUS_SUCCESS):
             # Initiate clear succeeded, wait for completion
             while True:
                 # Check status
                 b = self.device.ctrl_transfer(
-                      usb.util.build_request_type(usb.util.CTRL_IN, usb.util.CTRL_TYPE_CLASS, usb.util.CTRL_RECIPIENT_INTERFACE),
-                      USBTMC_REQUEST_CHECK_CLEAR_STATUS,
-                      0x0000,
-                      self.iface.index,
-                      0x0002,
-                      timeout=self._timeout_ms)
+                    bmRequestType=usb.util.build_request_type(usb.util.CTRL_IN, usb.util.CTRL_TYPE_CLASS, usb.util.CTRL_RECIPIENT_INTERFACE),
+                    bRequest=USBTMC_REQUEST_CHECK_CLEAR_STATUS,
+                    wValue=0x0000,
+                    wIndex=self.iface.index,
+                    data_or_wLength=0x0002,
+                    timeout=self._timeout_ms
+                )
                 if (b[0] == USBTMC_STATUS_PENDING):
                     time.sleep(0.1)
                 else:
@@ -737,23 +740,25 @@ class Instrument(object):
 
         # Send INITIATE_ABORT_BULK_OUT
         b = self.device.ctrl_transfer(
-              usb.util.build_request_type(usb.util.CTRL_IN, usb.util.CTRL_TYPE_CLASS, usb.util.CTRL_RECIPIENT_ENDPOINT),
-              USBTMC_REQUEST_INITIATE_ABORT_BULK_OUT,
-              btag,
-              self.bulk_out_ep.bEndpointAddress,
-              0x0002,
-              timeout=self._timeout_ms)
+            bmRequestType=usb.util.build_request_type(usb.util.CTRL_IN, usb.util.CTRL_TYPE_CLASS, usb.util.CTRL_RECIPIENT_ENDPOINT),
+            bRequest=USBTMC_REQUEST_INITIATE_ABORT_BULK_OUT,
+            wValue=btag,
+            wIndex=self.bulk_out_ep.bEndpointAddress,
+            data_or_wLength=0x0002,
+            timeout=self._timeout_ms
+        )
         if (b[0] == USBTMC_STATUS_SUCCESS):
             # Initiate abort bulk out succeeded, wait for completion
             while True:
                 # Check status
                 b = self.device.ctrl_transfer(
-                      usb.util.build_request_type(usb.util.CTRL_IN, usb.util.CTRL_TYPE_CLASS, usb.util.CTRL_RECIPIENT_ENDPOINT),
-                      USBTMC_REQUEST_CHECK_ABORT_BULK_OUT_STATUS,
-                      0x0000,
-                      self.bulk_out_ep.bEndpointAddress,
-                      0x0008,
-                      timeout=self._timeout_ms)
+                    bmRequestType=usb.util.build_request_type(usb.util.CTRL_IN, usb.util.CTRL_TYPE_CLASS, usb.util.CTRL_RECIPIENT_ENDPOINT),
+                    bRequest=USBTMC_REQUEST_CHECK_ABORT_BULK_OUT_STATUS,
+                    wValue=0x0000,
+                    wIndex=self.bulk_out_ep.bEndpointAddress,
+                    data_or_wLength=0x0008,
+                    timeout=self._timeout_ms
+                )
                 if (b[0] == USBTMC_STATUS_PENDING):
                     time.sleep(0.1)
                 else:
@@ -773,23 +778,25 @@ class Instrument(object):
 
         # Send INITIATE_ABORT_BULK_IN
         b = self.device.ctrl_transfer(
-              usb.util.build_request_type(usb.util.CTRL_IN, usb.util.CTRL_TYPE_CLASS, usb.util.CTRL_RECIPIENT_ENDPOINT),
-              USBTMC_REQUEST_INITIATE_ABORT_BULK_IN,
-              btag,
-              self.bulk_in_ep.bEndpointAddress,
-              0x0002,
-              timeout=self._timeout_ms)
+            bmRequestType=usb.util.build_request_type(usb.util.CTRL_IN, usb.util.CTRL_TYPE_CLASS, usb.util.CTRL_RECIPIENT_ENDPOINT),
+            bRequest=USBTMC_REQUEST_INITIATE_ABORT_BULK_IN,
+            wValue=btag,
+            wIndex=self.bulk_in_ep.bEndpointAddress,
+            data_or_wLength=0x0002,
+            timeout=self._timeout_ms
+        )
         if (b[0] == USBTMC_STATUS_SUCCESS):
             # Initiate abort bulk in succeeded, wait for completion
             while True:
                 # Check status
                 b = self.device.ctrl_transfer(
-                      usb.util.build_request_type(usb.util.CTRL_IN, usb.util.CTRL_TYPE_CLASS, usb.util.CTRL_RECIPIENT_ENDPOINT),
-                      USBTMC_REQUEST_CHECK_ABORT_BULK_IN_STATUS,
-                      0x0000,
-                      self.bulk_in_ep.bEndpointAddress,
-                      0x0008,
-                      timeout=self._timeout_ms)
+                    bmRequestType=usb.util.build_request_type(usb.util.CTRL_IN, usb.util.CTRL_TYPE_CLASS, usb.util.CTRL_RECIPIENT_ENDPOINT),
+                    bRequest=USBTMC_REQUEST_CHECK_ABORT_BULK_IN_STATUS,
+                    wValue=0x0000,
+                    wIndex=self.bulk_in_ep.bEndpointAddress,
+                    data_or_wLength=0x0008,
+                    timeout=self._timeout_ms
+                )
                 if (b[0] == USBTMC_STATUS_PENDING):
                     time.sleep(0.1)
                 else:
