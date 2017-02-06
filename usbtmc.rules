@@ -23,6 +23,10 @@ SUBSYSTEM=="usb", ACTION=="add", ATTRS{idVendor}=="2a8d", ATTRS{idProduct}=="2c1
 # Agilent B2962A
 SUBSYSTEM=="usb", ACTION=="add", ATTRS{idVendor}=="0957", ATTRS{idProduct}=="9018", GROUP="usbtmc", MODE="0660"
 
+# Agilent/Keysight U2722A, U2723A
+SUBSYSTEM=="usb", ACTION=="add", ATTRS{idVendor}=="0957", ATTRS{idProduct}=="4318", GROUP="usbtmc", MODE="0660"
+SUBSYSTEM=="usb", ACTION=="add", ATTRS{idVendor}=="0957", ATTRS{idProduct}=="4418", GROUP="usbtmc", MODE="0660"
+
 # Tektronix MDO4104
 SUBSYSTEM=="usb", ACTION=="add", ATTRS{idVendor}=="0699", ATTRS{idProduct}=="040c", GROUP="usbtmc", MODE="0660"
 

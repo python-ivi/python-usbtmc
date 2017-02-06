@@ -134,6 +134,12 @@ def list_devices():
                 # Advantest
                 return True
 
+            if dev.idVendor == 0x0957:
+                # Agilent
+                if dev.idProduct == 0x4418:
+                    # U2722A/U2723A (firmware update mode on power up)
+                    return True
+
         return False
 
     return list(usb.core.find(find_all=True, custom_match=is_usbtmc_device))
@@ -148,7 +154,12 @@ def find_device(idVendor=None, idProduct=None, iSerial=None):
         return None
 
     for dev in devs:
-        if dev.idVendor != idVendor or dev.idProduct != idProduct:
+        if idVendor == 0x0957 and idProduct == 0x4318:
+            # Agilent U2722A/U2723A (normal or firmware update mode)
+            if dev.idVendor != 0x0957 or dev.idProduct not in [0x4318, 0x4418]:
+                continue
+
+        elif dev.idVendor != idVendor or dev.idProduct != idProduct:
             continue
 
         if iSerial is None:
@@ -288,6 +299,36 @@ class Instrument(object):
             return
 
         # initialize device
+
+        if self.device.idVendor == 0x0957 and self.device.idProduct == 0x4418:
+            # Agilent U2722A/U2723A
+            # These devices require a short initialization sequence, presumably
+            # to take them out of 'firmware update' mode after confirming
+            # that the firmware version is correct. This is required once
+            # on every power-on before the U2722A/U2723A can be used.
+            # Note that the device will reset and the product ID will change
+            # from 0x4418 to 0x4318.
+
+            serial = self.device.serial_number
+
+            self.device.ctrl_transfer(bmRequestType=0xC0, bRequest=0x0C, wValue=0x0000, wIndex=0x047E, data_or_wLength=0x0001)
+            self.device.ctrl_transfer(bmRequestType=0xC0, bRequest=0x0C, wValue=0x0000, wIndex=0x047D, data_or_wLength=0x0006)
+            self.device.ctrl_transfer(bmRequestType=0xC0, bRequest=0x0C, wValue=0x0000, wIndex=0x0487, data_or_wLength=0x0005)
+            self.device.ctrl_transfer(bmRequestType=0xC0, bRequest=0x0C, wValue=0x0000, wIndex=0x0472, data_or_wLength=0x000C)
+            self.device.ctrl_transfer(bmRequestType=0xC0, bRequest=0x0C, wValue=0x0000, wIndex=0x047A, data_or_wLength=0x0001)
+            self.device.ctrl_transfer(bmRequestType=0x40, bRequest=0x0C, wValue=0x0000, wIndex=0x0475, data_or_wLength=b'\x00\x00\x01\x01\x00\x00\x08\x01')
+
+            usb.util.dispose_resources(self.device)
+            self.device = None
+
+            for i in range(20):
+                self.device = find_device(0x0957, 0x4318, serial)
+                if self.device is not None:
+                    break
+                time.sleep(0.5)
+
+            if self.device is None:
+                print("Agilent U2722A/U2723A initialization failed")
 
         # find first USBTMC interface
         for cfg in self.device:
