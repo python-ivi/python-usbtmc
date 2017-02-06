@@ -127,8 +127,14 @@ def list_devices():
         for cfg in dev:
             d = usb.util.find_descriptor(cfg, bInterfaceClass=USBTMC_bInterfaceClass,
                                          bInterfaceSubClass=USBTMC_bInterfaceSubClass)
-            is_advantest = dev.idVendor == 0x1334
-            return d is not None or is_advantest
+            if d is not None:
+                return True
+
+            if dev.idVendor == 0x1334:
+                # Advantest
+                return True
+
+        return False
 
     return list(usb.core.find(find_all=True, custom_match=is_usbtmc_device))
 
@@ -173,10 +179,6 @@ class Instrument(object):
         self.cfg = None
         self.iface = None
         self.term_char = None
-        self.advantest_quirk = False
-        self.advantest_locked = False
-        self.rigol_quirk = False
-        self.rigol_quirk_ieee_block = False
 
         self.bcdUSBTMC = 0
         self.support_pulse = False
@@ -207,6 +209,13 @@ class Instrument(object):
         self.connected = False
         self.reattach = []
         self.old_cfg = None
+
+        # quirks
+        self.advantest_quirk = False
+        self.advantest_locked = False
+
+        self.rigol_quirk = False
+        self.rigol_quirk_ieee_block = False
 
         resource = None
 
@@ -283,9 +292,14 @@ class Instrument(object):
         # find first USBTMC interface
         for cfg in self.device:
             for iface in cfg:
-                if (self.device.idVendor == 0x1334) or \
-                   (iface.bInterfaceClass == USBTMC_bInterfaceClass and
+                if (iface.bInterfaceClass == USBTMC_bInterfaceClass and
                     iface.bInterfaceSubClass == USBTMC_bInterfaceSubClass):
+                    # USBTMC device
+                    self.cfg = cfg
+                    self.iface = iface
+                    break
+                elif (self.device.idVendor == 0x1334):
+                    # Advantest
                     self.cfg = cfg
                     self.iface = iface
                     break
