@@ -156,7 +156,7 @@ def find_device(idVendor=None, idProduct=None, iSerial=None):
         return None
 
     for dev in devs:
-        if idVendor == 0x0957 and idProduct == 0x2818:
+        if idVendor == 0x0957 and idProduct == 0x2918:
             # Agilent U2701A/U2702A (normal or firmware update mode)
             if dev.idVendor != 0x0957 or dev.idProduct not in [0x2818, 0x2918]:
                 continue
