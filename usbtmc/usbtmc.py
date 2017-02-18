@@ -147,6 +147,39 @@ def list_devices():
     return list(usb.core.find(find_all=True, custom_match=is_usbtmc_device))
 
 
+def list_resources():
+    "List resource strings for all connected USBTMC devices"
+
+    res = []
+
+    for dev in list_devices():
+        idVendor = dev.idVendor
+        idProduct = dev.idProduct
+
+        # "fix" IDs for devices in firmware update mode
+        if idVendor == 0x0957 and idProduct == 0x2818:
+            idProduct = 0x2918
+
+        if idVendor == 0x0957 and idProduct == 0x4418:
+            # Agilent U2722A/U2723A firmware update mode
+            idProduct = 0x4318
+
+        # attempt to read serial number
+        iSerial = None
+        try:
+            iSerial = dev.serial_number
+        except:
+            pass
+
+        # append formatted resource string to list
+        if iSerial is None:
+            res.append("USB::%d::%d::INSTR" % (idVendor, idProduct))
+        else:
+            res.append("USB::%d::%d::%s::INSTR" % (idVendor, idProduct, iSerial))
+
+    return res
+
+
 def find_device(idVendor=None, idProduct=None, iSerial=None):
     "Find USBTMC instrument"
 
