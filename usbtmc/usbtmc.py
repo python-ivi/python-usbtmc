@@ -835,9 +835,8 @@ class Instrument(object):
                     data_or_wLength=0x0002,
                     timeout=self._timeout_ms
                 )
-                if (b[0] == USBTMC_STATUS_PENDING):
-                    time.sleep(0.1)
-                else:
+                time.sleep(0.1)
+                if (b[0] != USBTMC_STATUS_PENDING):
                     break
             # Clear halt condition
             self.bulk_out_ep.clear_halt()
@@ -874,9 +873,8 @@ class Instrument(object):
                     data_or_wLength=0x0008,
                     timeout=self._timeout_ms
                 )
-                if (b[0] == USBTMC_STATUS_PENDING):
-                    time.sleep(0.1)
-                else:
+                time.sleep(0.1)
+                if (b[0] != USBTMC_STATUS_PENDING):
                     break
         else:
             # no transfer in progress; nothing to do
@@ -912,9 +910,8 @@ class Instrument(object):
                     data_or_wLength=0x0008,
                     timeout=self._timeout_ms
                 )
-                if (b[0] == USBTMC_STATUS_PENDING):
-                    time.sleep(0.1)
-                else:
+                time.sleep(0.1)
+                if (b[0] != USBTMC_STATUS_PENDING):
                     break
         else:
             # no transfer in progress; nothing to do
