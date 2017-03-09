@@ -34,6 +34,9 @@ SUBSYSTEM=="usb", ACTION=="add", ATTRS{idVendor}=="0957", ATTRS{idProduct}=="441
 # Tektronix MDO4104
 SUBSYSTEM=="usb", ACTION=="add", ATTRS{idVendor}=="0699", ATTRS{idProduct}=="040c", GROUP="usbtmc", MODE="0660"
 
+# Rigol MSO1104Z
+SUBSYSTEM=="usb", ACTION=="add", ATTRS{idVendor}=="1ab1", ATTRS{idProduct}=="04ce", GROUP="usbtmc", MODE="0660"
+
 # Kernel devices
 KERNEL=="usbtmc/*",       MODE="0660", GROUP="usbtmc"
 KERNEL=="usbtmc[0-9]*",   MODE="0660", GROUP="usbtmc"
