@@ -159,6 +159,7 @@ def list_resources():
 
         # "fix" IDs for devices in firmware update mode
         if idVendor == 0x0957 and idProduct == 0x2818:
+            # Agilent U2701A/U2702A firmware update mode
             idProduct = 0x2918
 
         if idVendor == 0x0957 and idProduct == 0x4218:
@@ -379,9 +380,14 @@ class Instrument(object):
                 self.device.ctrl_transfer(bmRequestType=0xC0, bRequest=0x0C, wValue=0x0000, wIndex=0x047A, data_or_wLength=0x0001)
                 self.device.ctrl_transfer(bmRequestType=0x40, bRequest=0x0C, wValue=0x0000, wIndex=0x0475, data_or_wLength=b'\x00\x00\x01\x01\x00\x00\x08\x01')
 
-            if self.device.idProduct == 0x4218 or self.device.idProduct == 0x4418:
+            if self.device.idProduct in [0x4218, 0x4418]:
                 # U2722A/U2723A
-                new_id = 0x4118 if self.device.idProduct == 0x4218 else 0x4318
+                if self.device.idProduct == 0x4218:
+                    # U2722A
+                    new_id = 0x4118
+                elif self.device.idProduct == 0x4418:
+                    # U2723A
+                    new_id = 0x4318
                 self.device.ctrl_transfer(bmRequestType=0xC0, bRequest=0x0C, wValue=0x0000, wIndex=0x047E, data_or_wLength=0x0001)
                 self.device.ctrl_transfer(bmRequestType=0xC0, bRequest=0x0C, wValue=0x0000, wIndex=0x047D, data_or_wLength=0x0006)
                 self.device.ctrl_transfer(bmRequestType=0xC0, bRequest=0x0C, wValue=0x0000, wIndex=0x0487, data_or_wLength=0x0005)
