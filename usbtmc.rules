@@ -27,7 +27,11 @@ SUBSYSTEM=="usb", ACTION=="add", ATTRS{idVendor}=="0957", ATTRS{idProduct}=="901
 SUBSYSTEM=="usb", ACTION=="add", ATTRS{idVendor}=="0957", ATTRS{idProduct}=="2818", GROUP="usbtmc", MODE="0660"
 SUBSYSTEM=="usb", ACTION=="add", ATTRS{idVendor}=="0957", ATTRS{idProduct}=="2918", GROUP="usbtmc", MODE="0660"
 
-# Agilent/Keysight U2722A, U2723A
+# Agilent/Keysight U2722A
+SUBSYSTEM=="usb", ACTION=="add", ATTRS{idVendor}=="0957", ATTRS{idProduct}=="4118", GROUP="usbtmc", MODE="0660"
+SUBSYSTEM=="usb", ACTION=="add", ATTRS{idVendor}=="0957", ATTRS{idProduct}=="4218", GROUP="usbtmc", MODE="0660"
+
+# Agilent/Keysight U2723A
 SUBSYSTEM=="usb", ACTION=="add", ATTRS{idVendor}=="0957", ATTRS{idProduct}=="4318", GROUP="usbtmc", MODE="0660"
 SUBSYSTEM=="usb", ACTION=="add", ATTRS{idVendor}=="0957", ATTRS{idProduct}=="4418", GROUP="usbtmc", MODE="0660"
 
