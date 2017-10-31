@@ -1,48 +1,43 @@
 # USBTMC instruments
 
-# Agilent MSO7104A
-SUBSYSTEM=="usb", ACTION=="add", ATTRS{idVendor}=="0957", ATTRS{idProduct}=="1755", GROUP="usbtmc", MODE="0660"
+# Agilent/Keysight MSO7104A
+SUBSYSTEM=="usb", ACTION=="add", ATTRS{idVendor}=="0957|2a8d", ATTRS{idProduct}=="1755", GROUP="usbtmc", MODE="0660"
 
-# Agilent MSO7104B
-SUBSYSTEM=="usb", ACTION=="add", ATTRS{idVendor}=="0957", ATTRS{idProduct}=="175d", GROUP="usbtmc", MODE="0660"
+# Agilent/Keysight MSO7104B
+SUBSYSTEM=="usb", ACTION=="add", ATTRS{idVendor}=="0957|2a8d", ATTRS{idProduct}=="175d", GROUP="usbtmc", MODE="0660"
 
-# Agilent MSO-X 3014A
-SUBSYSTEM=="usb", ACTION=="add", ATTRS{idVendor}=="0957", ATTRS{idProduct}=="17a8", GROUP="usbtmc", MODE="0660"
-
-# Agilent DSA-X 96204Q
-SUBSYSTEM=="usb", ACTION=="add", ATTRS{idVendor}=="0957", ATTRS{idProduct}=="903c", GROUP="usbtmc", MODE="0660"
-
-# Agilent/Keysight U2001A
-SUBSYSTEM=="usb", ACTION=="add", ATTRS{idVendor}=="0957", ATTRS{idProduct}=="2b18", GROUP="usbtmc", MODE="0660"
-SUBSYSTEM=="usb", ACTION=="add", ATTRS{idVendor}=="2a8d", ATTRS{idProduct}=="2b18", GROUP="usbtmc", MODE="0660"
-
-# Agilent/Keysight U2002A
-SUBSYSTEM=="usb", ACTION=="add", ATTRS{idVendor}=="0957", ATTRS{idProduct}=="2c18", GROUP="usbtmc", MODE="0660"
-SUBSYSTEM=="usb", ACTION=="add", ATTRS{idVendor}=="2a8d", ATTRS{idProduct}=="2c18", GROUP="usbtmc", MODE="0660"
-
-# Agilent B2962A
-SUBSYSTEM=="usb", ACTION=="add", ATTRS{idVendor}=="0957", ATTRS{idProduct}=="9018", GROUP="usbtmc", MODE="0660"
-
-# Agilent/Keysight U2701A, U2702A
-SUBSYSTEM=="usb", ACTION=="add", ATTRS{idVendor}=="0957", ATTRS{idProduct}=="2818", GROUP="usbtmc", MODE="0660"
-SUBSYSTEM=="usb", ACTION=="add", ATTRS{idVendor}=="0957", ATTRS{idProduct}=="2918", GROUP="usbtmc", MODE="0660"
-
-# Agilent/Keysight U2722A
-SUBSYSTEM=="usb", ACTION=="add", ATTRS{idVendor}=="0957", ATTRS{idProduct}=="4118", GROUP="usbtmc", MODE="0660"
-SUBSYSTEM=="usb", ACTION=="add", ATTRS{idVendor}=="0957", ATTRS{idProduct}=="4218", GROUP="usbtmc", MODE="0660"
-
-# Agilent/Keysight U2723A
-SUBSYSTEM=="usb", ACTION=="add", ATTRS{idVendor}=="0957", ATTRS{idProduct}=="4318", GROUP="usbtmc", MODE="0660"
-SUBSYSTEM=="usb", ACTION=="add", ATTRS{idVendor}=="0957", ATTRS{idProduct}=="4418", GROUP="usbtmc", MODE="0660"
-
-# Agilent/Keysight 34461A
-SUBSYSTEM=="usb", ACTION=="add", ATTRS{idVendor}=="2a8d", ATTRS{idProduct}=="1301", GROUP="usbtmc", MODE="0660"
-
-# Agilent/Keysight 33500B
-SUBSYSTEM=="usb", ACTION=="add", ATTRS{idVendor}=="0957", ATTRS{idProduct}=="2807", GROUP="usbtmc", MODE="0660"
+# Agilent/Keysight MSO-X 3014A
+SUBSYSTEM=="usb", ACTION=="add", ATTRS{idVendor}=="0957|2a8d", ATTRS{idProduct}=="17a8", GROUP="usbtmc", MODE="0660"
 
 # Agilent/Keysight MSO-X 4154A
-SUBSYSTEM=="usb", ACTION=="add", ATTRS{idVendor}=="0957", ATTRS{idProduct}=="17bc", GROUP="usbtmc", MODE="0660"
+SUBSYSTEM=="usb", ACTION=="add", ATTRS{idVendor}=="0957|2a8d", ATTRS{idProduct}=="17bc", GROUP="usbtmc", MODE="0660"
+
+# Agilent/Keysight DSA-X 96204Q
+SUBSYSTEM=="usb", ACTION=="add", ATTRS{idVendor}=="0957|2a8d", ATTRS{idProduct}=="903c", GROUP="usbtmc", MODE="0660"
+
+# Agilent/Keysight U2001A
+SUBSYSTEM=="usb", ACTION=="add", ATTRS{idVendor}=="0957|2a8d", ATTRS{idProduct}=="2b18", GROUP="usbtmc", MODE="0660"
+
+# Agilent/Keysight U2002A
+SUBSYSTEM=="usb", ACTION=="add", ATTRS{idVendor}=="0957|2a8d", ATTRS{idProduct}=="2c18", GROUP="usbtmc", MODE="0660"
+
+# Agilent/Keysight B2962A
+SUBSYSTEM=="usb", ACTION=="add", ATTRS{idVendor}=="0957|2a8d", ATTRS{idProduct}=="9018", GROUP="usbtmc", MODE="0660"
+
+# Agilent/Keysight U2701A, U2702A
+SUBSYSTEM=="usb", ACTION=="add", ATTRS{idVendor}=="0957|2a8d", ATTRS{idProduct}=="2818|2918", GROUP="usbtmc", MODE="0660"
+
+# Agilent/Keysight U2722A
+SUBSYSTEM=="usb", ACTION=="add", ATTRS{idVendor}=="0957|2a8d", ATTRS{idProduct}=="4118|4218", GROUP="usbtmc", MODE="0660"
+
+# Agilent/Keysight U2723A
+SUBSYSTEM=="usb", ACTION=="add", ATTRS{idVendor}=="0957|2a8d", ATTRS{idProduct}=="4318|4418", GROUP="usbtmc", MODE="0660"
+
+# Agilent/Keysight 33500B
+SUBSYSTEM=="usb", ACTION=="add", ATTRS{idVendor}=="0957|2a8d", ATTRS{idProduct}=="2807", GROUP="usbtmc", MODE="0660"
+
+# Agilent/Keysight 34461A
+SUBSYSTEM=="usb", ACTION=="add", ATTRS{idVendor}=="0957|2a8d", ATTRS{idProduct}=="1301", GROUP="usbtmc", MODE="0660"
 
 # Tektronix MDO4104
 SUBSYSTEM=="usb", ACTION=="add", ATTRS{idVendor}=="0699", ATTRS{idProduct}=="040c", GROUP="usbtmc", MODE="0660"
