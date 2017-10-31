@@ -35,6 +35,15 @@ SUBSYSTEM=="usb", ACTION=="add", ATTRS{idVendor}=="0957", ATTRS{idProduct}=="421
 SUBSYSTEM=="usb", ACTION=="add", ATTRS{idVendor}=="0957", ATTRS{idProduct}=="4318", GROUP="usbtmc", MODE="0660"
 SUBSYSTEM=="usb", ACTION=="add", ATTRS{idVendor}=="0957", ATTRS{idProduct}=="4418", GROUP="usbtmc", MODE="0660"
 
+# Agilent/Keysight 34461A
+SUBSYSTEM=="usb", ACTION=="add", ATTRS{idVendor}=="2a8d", ATTRS{idProduct}=="1301", GROUP="usbtmc", MODE="0660"
+
+# Agilent/Keysight 33500B
+SUBSYSTEM=="usb", ACTION=="add", ATTRS{idVendor}=="0957", ATTRS{idProduct}=="2807", GROUP="usbtmc", MODE="0660"
+
+# Agilent/Keysight MSO-X 4154A
+SUBSYSTEM=="usb", ACTION=="add", ATTRS{idVendor}=="0957", ATTRS{idProduct}=="17bc", GROUP="usbtmc", MODE="0660"
+
 # Tektronix MDO4104
 SUBSYSTEM=="usb", ACTION=="add", ATTRS{idVendor}=="0699", ATTRS{idProduct}=="040c", GROUP="usbtmc", MODE="0660"
 
