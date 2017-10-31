@@ -672,6 +672,9 @@ class Instrument(object):
 
                 resp = self.bulk_in_ep.read(read_len+USBTMC_HEADER_SIZE+3, timeout=self._timeout_ms)
 
+                if len(resp) < 4:
+                    raise usb.core.USBError('Operation timed out', errno=110)
+
                 if sys.version_info >= (3, 2):
                     resp = resp.tobytes()
                 else:
