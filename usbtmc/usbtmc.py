@@ -709,7 +709,14 @@ class Instrument(object):
                     else:
                         eom = False
                 else:
-                    eom = transfer_attributes & 1
+                    # Only consider EOM flag when transfer_size bytes received.
+                    # See USBTMC v1.00 3.3.1.1:
+                    #     "The host must ignore EOM if the device does not
+                    #     send TransferSize message data bytes."
+                    if len(data) >= transfer_size:
+                        eom = (transfer_attributes & 1) != 0
+                    else:
+                        eom = False
                     read_data += data
 
                 # Advantest devices never signal EOI and may only send one read packet
