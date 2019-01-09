@@ -900,9 +900,12 @@ class Instrument(object):
                 time.sleep(0.1)
                 if (b[0] != USBTMC_STATUS_PENDING):
                     break
-        else:
-            # no transfer in progress; nothing to do
-            pass
+        if (b[0] == USBTMC_STATUS_SUCCESS):
+            # Abort request completed. Clear endpoint.
+            # See USBTMC v1.00 4.2.1.3:
+            #     "The host must send a CLEAR_FEATURE control endpoint
+            #     request to clear the Bulk-OUT halt."
+            self.bulk_out_ep.clear_halt()
 
     def _abort_bulk_in(self, btag=None):
         "Abort bulk in"
