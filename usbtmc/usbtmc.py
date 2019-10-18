@@ -485,6 +485,10 @@ class Instrument(object):
             if self.device.idProduct == 0x04ce:
                 self.rigol_quirk_ieee_block = True
 
+        # BK Precision 8600
+        if self.device.idVendor == 0x2ec7 and self.device.idProduct == 0x8800:
+            self.device.ctrl_transfer(bmRequestType=0xA1, bRequest=0xA0, wValue=0x0001, wIndex=0x0000, data_or_wLength=1)
+
         self.connected = True
 
         self.clear()
