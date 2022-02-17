@@ -860,6 +860,66 @@ class Instrument(object):
         else:
             raise UsbtmcException("Clear failed", 'clear')
 
+        if b[0] != USBTMC_STATUS_SUCCESS:
+            raise UsbtmcException(f"Clear failed: INITIATE_CLEAR returned {b[0]}", 'clear')
+
+        while True:
+            bulk_read_timed_out = False
+
+            # Initiate clear succeeded. Send CHECK_CLEAR_STATUS request
+            b = self.device.ctrl_transfer(
+                  usb.util.build_request_type(usb.util.CTRL_IN, usb.util.CTRL_TYPE_CLASS, usb.util.CTRL_RECIPIENT_INTERFACE),
+                  USBTMC_REQUEST_CHECK_CLEAR_STATUS,
+                  0x0000,
+                  self.iface.index,
+                  0x0002,
+                  timeout=int(self.timeout*1000))
+
+            if b[0] == USBTMC_STATUS_SUCCESS:
+                break
+            elif b[0] == USBTMC_STATUS_PENDING:
+                # There is bulk data waiting to be read. Read it all.
+                if (b[1] & 1) != 0:
+                    USBTMC_MAX_READS_TO_CLEAR_BULK_IN = 100
+                    num_reads = 0
+
+                    while num_reads < USBTMC_MAX_READS_TO_CLEAR_BULK_IN:
+                        try:
+                            resp = self.bulk_in_ep.read(USBTMC_BUFSIZE, timeout=100)
+                        except usb.core.USBError as e:
+                            exc = sys.exc_info()[1]
+                            if exc.errno == 110:
+                                # Timeout: assume there was no data to read and attempt to plow ahead below
+                                bulk_read_timed_out = True
+                                break
+                            else:
+                                raise e
+
+                        num_reads += 1
+
+                        # If the response didn't fill the entire buffer, we have
+                        # cleared the bulk endpoint. Otherwise, sleep a bit so as
+                        # to not stress the device and read more.
+                        if len(resp) < USBTMC_BUFSIZE:
+                            break
+
+                        time.sleep(0.1)
+
+                    if num_reads >= USBTMC_MAX_READS_TO_CLEAR_BULK_IN:
+                        raise UsbtmcException(
+                            f"Clear failed: Couldn't clear device buffer within {USBTMC_MAX_READS_TO_CLEAR_BULK_IN} tries",
+                            'clear')
+
+                    if bulk_read_timed_out:
+                        break
+            else:
+                raise UsbtmcException(f"Clear failed: CHECK_CLEAR_STATUS returned {b[0]}", 'clear')
+
+        time.sleep(0.1)
+
+        # Clear halt condition
+        self.bulk_out_ep.clear_halt()
+
     def _abort_bulk_out(self, btag=None):
         "Abort bulk out"
 
