@@ -136,11 +136,12 @@ def list_devices():
 
             if dev.idVendor == 0x0957:
                 # Agilent
-                if dev.idProduct in [0x2818, 0x4218, 0x4418]:
+                if dev.idProduct in [0x2818, 0x4218, 0x4418, 0x4818]:
                     # Agilent U27xx modular devices in firmware update mode
                     # 0x2818 for U2701A/U2702A (firmware update mode on power up)
                     # 0x4218 for U2722A (firmware update mode on power up)
                     # 0x4418 for U2723A (firmware update mode on power up)
+                    # 0x4818 for U2741A (firmware update mode on power up)
                     return True
 
         return False
@@ -169,6 +170,10 @@ def list_resources():
         if idVendor == 0x0957 and idProduct == 0x4418:
             # Agilent U2723A firmware update mode
             idProduct = 0x4318
+
+        if idVendor == 0x0957 and idProduct == 0x4818:
+            # Agilent U2741A firmware update mode
+            idProduct = 0x4918
 
         # attempt to read serial number
         iSerial = None
@@ -354,9 +359,9 @@ class Instrument(object):
 
         # initialize device
 
-        if self.device.idVendor == 0x0957 and self.device.idProduct in [0x2818, 0x4218, 0x4418]:
+        if self.device.idVendor == 0x0957 and self.device.idProduct in [0x2818, 0x4218, 0x4418, 0x4818]:
             # Agilent U27xx modular devices
-            # U2701A/U2702A, U2722A/U2723A
+            # U2701A/U2702A, U2722A/U2723A, U2741A
             # These devices require a short initialization sequence, presumably
             # to take them out of 'firmware update' mode after confirming
             # that the firmware version is correct. This is required once
@@ -365,20 +370,38 @@ class Instrument(object):
             # U2701A/U2702A boot 0x2818, usbtmc 0x2918
             # U2722A boot 0x4218, usbtmc 0x4118
             # U2723A boot 0x4418, usbtmc 0x4318
+            # U2741A boot 0x4818, usbtmc 0x4918
  
-            serial = self.device.serial_number
+            if self.device.idProduct == 0x4818:
+                # U2741A has a firmware bug (?) that causes a pipe error if the serial number is read out
+                # USB analyzer says that the string descriptor is corrupted
+                serial = None
+            else:
+                serial = self.device.serial_number
 
             new_id = 0
-
+            
             if self.device.idProduct == 0x2818:
                 # U2701A/U2702A
                 new_id = 0x2918
+                
                 self.device.ctrl_transfer(bmRequestType=0xC0, bRequest=0x0C, wValue=0x0000, wIndex=0x047E, data_or_wLength=0x0001)
                 self.device.ctrl_transfer(bmRequestType=0xC0, bRequest=0x0C, wValue=0x0000, wIndex=0x047D, data_or_wLength=0x0006)
                 self.device.ctrl_transfer(bmRequestType=0xC0, bRequest=0x0C, wValue=0x0000, wIndex=0x0484, data_or_wLength=0x0005)
                 self.device.ctrl_transfer(bmRequestType=0xC0, bRequest=0x0C, wValue=0x0000, wIndex=0x0472, data_or_wLength=0x000C)
                 self.device.ctrl_transfer(bmRequestType=0xC0, bRequest=0x0C, wValue=0x0000, wIndex=0x047A, data_or_wLength=0x0001)
                 self.device.ctrl_transfer(bmRequestType=0x40, bRequest=0x0C, wValue=0x0000, wIndex=0x0475, data_or_wLength=b'\x00\x00\x01\x01\x00\x00\x08\x01')
+
+            if self.device.idProduct == 0x4818:
+                # U2741A
+                new_id = 0x4918
+
+                self.device.ctrl_transfer(bmRequestType=0xC0, bRequest=0x0C, wValue=0x0000, wIndex=0x047E, data_or_wLength=0x0001)
+                self.device.ctrl_transfer(bmRequestType=0xC0, bRequest=0x0C, wValue=0x0000, wIndex=0x047D, data_or_wLength=0x0006)
+                self.device.ctrl_transfer(bmRequestType=0xC0, bRequest=0x0C, wValue=0x0000, wIndex=0x0484, data_or_wLength=0x0005)
+                self.device.ctrl_transfer(bmRequestType=0xC0, bRequest=0x0C, wValue=0x0000, wIndex=0x0472, data_or_wLength=0x000C)
+                self.device.ctrl_transfer(bmRequestType=0xC0, bRequest=0x0C, wValue=0x0000, wIndex=0x047A, data_or_wLength=0x0001)
+                self.device.ctrl_transfer(bmRequestType=0x40, bRequest=0x0C, wValue=0x0000, wIndex=0x0475, data_or_wLength=b'\x00\x00\x01\x01\x00\x00\x00\x00')
 
             if self.device.idProduct in [0x4218, 0x4418]:
                 # U2722A/U2723A
@@ -388,6 +411,7 @@ class Instrument(object):
                 elif self.device.idProduct == 0x4418:
                     # U2723A
                     new_id = 0x4318
+
                 self.device.ctrl_transfer(bmRequestType=0xC0, bRequest=0x0C, wValue=0x0000, wIndex=0x047E, data_or_wLength=0x0001)
                 self.device.ctrl_transfer(bmRequestType=0xC0, bRequest=0x0C, wValue=0x0000, wIndex=0x047D, data_or_wLength=0x0006)
                 self.device.ctrl_transfer(bmRequestType=0xC0, bRequest=0x0C, wValue=0x0000, wIndex=0x0487, data_or_wLength=0x0005)
@@ -399,7 +423,11 @@ class Instrument(object):
             self.device = None
 
             for i in range(40):
-                self.device = find_device(0x0957, new_id, serial)
+                if serial is None:
+                    self.device = find_device(0x0957, new_id)
+                else:
+                    self.device = find_device(0x0957, new_id, serial)
+
                 if self.device is not None:
                     break
                 time.sleep(0.5)
