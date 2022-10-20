@@ -487,7 +487,9 @@ class Instrument(object):
 
         self.connected = True
 
-        self.clear()
+        # DS1000Z (and DS2000, from eevblog forum) fails with INITIATE_CLEAR
+        if not self.rigol_quirk:
+            self.clear()
 
         self.get_capabilities()
 
