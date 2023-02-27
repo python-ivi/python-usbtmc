@@ -15,6 +15,9 @@ SUBSYSTEM=="usb", ACTION=="add", ATTRS{idVendor}=="0957|2a8d", ATTRS{idProduct}=
 # Agilent/Keysight DSA-X 96204Q
 SUBSYSTEM=="usb", ACTION=="add", ATTRS{idVendor}=="0957|2a8d", ATTRS{idProduct}=="903c", GROUP="usbtmc", MODE="0660"
 
+# Agilent/Keysight DSO-X 2014A
+SUBSYSTEM=="usb", ACTION=="add", ATTRS{idVendor}=="0957|2a8d", ATTRS{idProduct}=="1798", GROUP="usbtmc", MODE="0660"
+
 # Agilent/Keysight U2001A
 SUBSYSTEM=="usb", ACTION=="add", ATTRS{idVendor}=="0957|2a8d", ATTRS{idProduct}=="2b18", GROUP="usbtmc", MODE="0660"
 
