@@ -54,6 +54,9 @@ SUBSYSTEM=="usb", ACTION=="add", ATTRS{idVendor}=="1ab1", ATTRS{idProduct}=="04b
 # Rigol DS4000
 SUBSYSTEM=="usb", ACTION=="add", ATTRS{idVendor}=="1ab1", ATTRS{idProduct}=="04b1", GROUP="usbtmc", MODE="0660"
 
+# Rigol DM3058E
+SUBSYSTEM=="usb", ACTION=="add", ATTRS{idVendor}=="1ab1", ATTRS{idProduct}=="09c4", GROUP="usbtmc", MODE="0660"
+
 # Kernel devices
 KERNEL=="usbtmc/*",       MODE="0660", GROUP="usbtmc"
 KERNEL=="usbtmc[0-9]*",   MODE="0660", GROUP="usbtmc"
