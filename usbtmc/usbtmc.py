@@ -265,6 +265,11 @@ class Instrument(object):
 
         self.timeout = 5.0
 
+        # Separate timeout for abort sequences. It is reasonable to wait
+        # longer during an abort sequence, to avoid leaving the device
+        # in an unusable state.
+        self.abort_timeout = 5.0
+
         self.bulk_in_ep = None
         self.bulk_out_ep = None
         self.interrupt_in_ep = None
@@ -724,7 +729,14 @@ class Instrument(object):
                     else:
                         eom = False
                 else:
-                    eom = transfer_attributes & 1
+                    # Only consider EOM flag when transfer_size bytes received.
+                    # See USBTMC v1.00 3.3.1.1:
+                    #     "The host must ignore EOM if the device does not
+                    #     send TransferSize message data bytes."
+                    if len(data) >= transfer_size:
+                        eom = (transfer_attributes & 1) != 0
+                    else:
+                        eom = False
                     read_data += data
 
                 # Advantest devices never signal EOI and may only send one read packet
@@ -889,6 +901,8 @@ class Instrument(object):
         if btag is None:
             btag = self.last_btag
 
+        abort_timeout_ms = int(1000 * self.abort_timeout)
+
         # Send INITIATE_ABORT_BULK_OUT
         b = self.device.ctrl_transfer(
             bmRequestType=usb.util.build_request_type(usb.util.CTRL_IN, usb.util.CTRL_TYPE_CLASS, usb.util.CTRL_RECIPIENT_ENDPOINT),
@@ -896,7 +910,7 @@ class Instrument(object):
             wValue=btag,
             wIndex=self.bulk_out_ep.bEndpointAddress,
             data_or_wLength=0x0002,
-            timeout=self._timeout_ms
+            timeout=abort_timeout_ms
         )
         if (b[0] == USBTMC_STATUS_SUCCESS):
             # Initiate abort bulk out succeeded, wait for completion
@@ -908,14 +922,17 @@ class Instrument(object):
                     wValue=0x0000,
                     wIndex=self.bulk_out_ep.bEndpointAddress,
                     data_or_wLength=0x0008,
-                    timeout=self._timeout_ms
+                    timeout=abort_timeout_ms
                 )
                 time.sleep(0.1)
                 if (b[0] != USBTMC_STATUS_PENDING):
                     break
-        else:
-            # no transfer in progress; nothing to do
-            pass
+        if (b[0] == USBTMC_STATUS_SUCCESS):
+            # Abort request completed. Clear endpoint.
+            # See USBTMC v1.00 4.2.1.3:
+            #     "The host must send a CLEAR_FEATURE control endpoint
+            #     request to clear the Bulk-OUT halt."
+            self.bulk_out_ep.clear_halt()
 
     def _abort_bulk_in(self, btag=None):
         "Abort bulk in"
@@ -926,6 +943,8 @@ class Instrument(object):
         if btag is None:
             btag = self.last_btag
 
+        abort_timeout_ms = int(1000 * self.abort_timeout)
+
         # Send INITIATE_ABORT_BULK_IN
         b = self.device.ctrl_transfer(
             bmRequestType=usb.util.build_request_type(usb.util.CTRL_IN, usb.util.CTRL_TYPE_CLASS, usb.util.CTRL_RECIPIENT_ENDPOINT),
@@ -933,9 +952,21 @@ class Instrument(object):
             wValue=btag,
             wIndex=self.bulk_in_ep.bEndpointAddress,
             data_or_wLength=0x0002,
-            timeout=self._timeout_ms
+            timeout=abort_timeout_ms
         )
+
         if (b[0] == USBTMC_STATUS_SUCCESS):
+            # Read remaining data from bulk in endpoint.
+            # This is a required step before the abort request can complete.
+            #
+            # See USBTMC v1.00 4.2.1.4:
+            #     "The host should continue reading from the Bulk-IN endpoint
+            #     until a short packet is received."
+            # USBTMC v1.00 4.2.1.5:
+            #     "The host should not send CHECK_ABORT_BULK_IN_STATUS until
+            #     a short Bulk-IN packet has been received."
+            resp = self.bulk_in_ep.read(self.max_transfer_size, timeout=abort_timeout_ms)
+
             # Initiate abort bulk in succeeded, wait for completion
             while True:
                 # Check status
@@ -945,7 +976,7 @@ class Instrument(object):
                     wValue=0x0000,
                     wIndex=self.bulk_in_ep.bEndpointAddress,
                     data_or_wLength=0x0008,
-                    timeout=self._timeout_ms
+                    timeout=abort_timeout_ms
                 )
                 time.sleep(0.1)
                 if (b[0] != USBTMC_STATUS_PENDING):
