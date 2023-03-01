@@ -31,6 +31,7 @@ import time
 import os
 import re
 import sys
+import warnings
 
 # constants
 USBTMC_bInterfaceClass    = 0xFE
@@ -605,9 +606,28 @@ class Instrument(object):
 
     def unpack_dev_dep_resp_header(self, data):
         msgid, btag, btaginverse = self.unpack_bulk_in_header(data)
-        transfer_size, transfer_attributes = struct.unpack_from('<LBxxx', data, 4)
-        data = data[USBTMC_HEADER_SIZE:transfer_size+USBTMC_HEADER_SIZE]
+        # some devices seem to put out a bad response initially.  See for example
+        # https://github.com/pyvisa/pyvisa-py/issues/20
+        if msgid != USBTMC_MSGID_DEV_DEP_MSG_IN:
+            warnings.warn(
+                f"Unexpected MsgID format:  MsgID={msgid}, bTag=0b{btag:08b}, bTagInverse=0b{btaginverse:08b}.  Expected MsgID={USBTMC_MSGID_DEV_DEP_MSG_IN}."
+            )
+            warnings.warn(
+                 "Consider updating the device's firmware."
+            )
+            data = data.rstrip(b"\x00")
+            # check whether it contains a ';' and if so throw away the first 12 bytes
+            if b";" in data:
+                transfer_size, transfer_attributes = struct.unpack_from("<LBxxx", data, 4)
+                data = data[USBTMC_HEADER_SIZE:]
+            else:
+                transfer_size = 0
+                transfer_attributes = 1
+        else:
+            transfer_size, transfer_attributes = struct.unpack_from('<LBxxx', data, 4)
+            data = data[USBTMC_HEADER_SIZE:transfer_size+USBTMC_HEADER_SIZE]
         return (msgid, btag, btaginverse, transfer_size, transfer_attributes, data)
+
 
     def write_raw(self, data):
         "Write binary data to instrument"
