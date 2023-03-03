@@ -404,7 +404,7 @@ class Instrument(object):
             usb.util.dispose_resources(self.device)
             self.device = None
 
-            for i in range(40):
+            for _i in range(40):
                 self.device = find_device(0x0957, new_id, serial)
                 if self.device is not None:
                     break
