@@ -175,7 +175,7 @@ def list_resources():
         iSerial = None
         try:
             iSerial = dev.serial_number
-        except:
+        except Exception:
             pass
 
         # append formatted resource string to list
@@ -225,7 +225,7 @@ def find_device(idVendor=None, idProduct=None, iSerial=None):
             # try reading serial number
             try:
                 s = dev.serial_number
-            except:
+            except Exception:
                 pass
 
             if iSerial == s:
@@ -512,9 +512,9 @@ class Instrument(object):
             for iface in self.reattach:
                 try:
                     self.device.attach_kernel_driver(iface)
-                except:
+                except Exception:
                     pass
-        except:
+        except Exception:
             pass
 
         self.reattach = []
@@ -1031,7 +1031,7 @@ class Instrument(object):
             # This Advantest/ADCMT vendor-specific control command reads the "MyID" identifier
             try:
                 return int(self.device.ctrl_transfer(bmRequestType=0xC1, bRequest=0xF5, wValue=0x0000, wIndex=0x0000, data_or_wLength=1)[0])
-            except:
+            except Exception:
                 return None
         else:
             raise NotImplementedError()
