@@ -615,10 +615,10 @@ class Instrument(object):
         # https://github.com/pyvisa/pyvisa-py/issues/20
         if msgid != USBTMC_MSGID_DEV_DEP_MSG_IN:
             warnings.warn(
-                f"Unexpected MsgID format:  MsgID={msgid}, bTag=0b{btag:08b}, bTagInverse=0b{btaginverse:08b}.  Expected MsgID={USBTMC_MSGID_DEV_DEP_MSG_IN}."
+                f"Unexpected MsgID format:  MsgID={msgid}, bTag=0b{btag:08b}, bTagInverse=0b{btaginverse:08b}."
             )
             warnings.warn(
-                 "Consider updating the device's firmware."
+                 f"Expected MsgID={USBTMC_MSGID_DEV_DEP_MSG_IN} (DEV_DEP_MSG_IN).  Consider updating the device's firmware."
             )
             data = data.rstrip(b"\x00")
             # check whether it contains a ';' and if so throw away the first 12 bytes
