@@ -539,13 +539,13 @@ class Instrument(object):
 
             if self.is_usb488():
                 self.bcdUSB488 = (b[13] << 8) + b[12]
-                self.support_USB4882 = b[4] & 4 != 0
-                self.support_remote_local = b[4] & 2 != 0
-                self.support_trigger = b[4] & 1 != 0
-                self.support_scpi = b[4] & 8 != 0
-                self.support_SR = b[4] & 4 != 0
-                self.support_RL = b[4] & 2 != 0
-                self.support_DT = b[4] & 1 != 0
+                self.support_USB4882 = b[14] & 4 != 0
+                self.support_remote_local = b[14] & 2 != 0
+                self.support_trigger = b[14] & 1 != 0
+                self.support_scpi = b[15] & 8 != 0
+                self.support_SR = b[15] & 4 != 0
+                self.support_RL = b[15] & 2 != 0
+                self.support_DT = b[15] & 1 != 0
         else:
             raise UsbtmcException("Get capabilities failed", 'get_capabilities')
 
